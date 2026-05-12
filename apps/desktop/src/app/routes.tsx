@@ -47,7 +47,7 @@ export function AppRoutes() {
   if (route === ROUTES.SETTINGS || route === ROUTES.SETTINGS_CONNECTIONS) {
     return (
       <div className="p-4">
-        <SettingsView />
+        <SettingsView onClose={() => undefined} />
       </div>
     );
   }

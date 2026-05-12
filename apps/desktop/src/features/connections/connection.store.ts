@@ -3,6 +3,16 @@ import { connectionService } from "./connection.service";
 import { validateConnectionInput } from "./connection.validation";
 import type { ConnectionStoreState } from "./connection.types";
 
+function toErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+  return fallback;
+}
+
 export const useConnectionStore = create<ConnectionStoreState>((set, get) => ({
   items: [],
   activeConnectionId: null,
@@ -17,9 +27,12 @@ export const useConnectionStore = create<ConnectionStoreState>((set, get) => ({
         activeConnectionId: items.find((item) => item.status === "ACTIVE")?.id ?? items[0]?.id ?? null,
         isLoading: false
       });
-    } catch {
+    } catch (error) {
       set({
-        error: "Could not connect to this R2 bucket. Check the endpoint, bucket name, and access key permissions.",
+        error: toErrorMessage(
+          error,
+          "Could not connect to this R2 bucket. Check the endpoint, bucket name, and access key permissions."
+        ),
         isLoading: false
       });
     }
@@ -36,9 +49,12 @@ export const useConnectionStore = create<ConnectionStoreState>((set, get) => ({
       const previous = get().items;
       set({ items: [...previous, created], activeConnectionId: created.id, isLoading: false });
       await connectionService.setActive(created.id);
-    } catch {
+    } catch (error) {
       set({
-        error: "Could not connect to this R2 bucket. Check the endpoint, bucket name, and access key permissions.",
+        error: toErrorMessage(
+          error,
+          "Could not connect to this R2 bucket. Check the endpoint, bucket name, and access key permissions."
+        ),
         isLoading: false
       });
     }

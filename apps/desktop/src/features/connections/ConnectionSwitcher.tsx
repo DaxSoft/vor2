@@ -1,9 +1,10 @@
 import { Check, ChevronDown, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useConnectionStore } from "./connection.store";
 
 export function ConnectionSwitcher({ onAddConnection }: { onAddConnection: () => void }) {
   const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const items = useConnectionStore((state) => state.items);
   const activeConnectionId = useConnectionStore((state) => state.activeConnectionId);
   const setActiveConnection = useConnectionStore((state) => state.setActiveConnection);
@@ -13,8 +14,29 @@ export function ConnectionSwitcher({ onAddConnection }: { onAddConnection: () =>
     [activeConnectionId, items]
   );
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const onPointerDown = (event: MouseEvent) => {
+      const root = rootRef.current;
+      if (!root) {
+        return;
+      }
+      if (event.target instanceof Node && !root.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onPointerDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+    };
+  }, [open]);
+
   return (
-    <div className="relative">
+    <div ref={rootRef} className="relative">
       <button
         type="button"
         aria-label="Connection switcher"

@@ -1,4 +1,3 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 
 export function isDesktopRuntime(): boolean {
@@ -15,14 +14,14 @@ export async function minimizeWindow(): Promise<void> {
   if (!isDesktopRuntime()) {
     return;
   }
-  await getCurrentWindow().minimize();
+  await invoke("minimize_main_window");
 }
 
 export async function toggleMaximizeWindow(): Promise<void> {
   if (!isDesktopRuntime()) {
     return;
   }
-  await getCurrentWindow().toggleMaximize();
+  await invoke("toggle_maximize_main_window");
 }
 
 export async function closeToTray(): Promise<void> {

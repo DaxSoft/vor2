@@ -35,12 +35,31 @@ fn should_start_minimized(state: &AppState) -> bool {
     .unwrap_or(true)
 }
 
+fn should_close_to_tray(state: &AppState) -> bool {
+    let user_id = match state.user_id.lock() {
+        Ok(value) => value.clone().unwrap_or_else(|| String::from("local-user")),
+        Err(_) => String::from("local-user"),
+    };
+
+    with_connection(state.db_path.as_ref(), |connection| {
+        let mut stmt = connection
+            .prepare("SELECT close_to_tray FROM app_settings WHERE user_id = ?1")
+            .map_err(|err| err.to_string())?;
+        let value = stmt
+            .query_row(params![user_id], |row| row.get::<_, i64>(0))
+            .ok();
+        Ok(value.unwrap_or(1) == 1)
+    })
+    .unwrap_or(true)
+}
+
 fn apply_window_effects(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         #[cfg(target_os = "windows")]
         {
-            let _ = apply_mica(&window, None);
-            let _ = apply_acrylic(&window, Some((12, 18, 30, 120)));
+            if apply_acrylic(&window, Some((16, 22, 34, 140))).is_err() {
+                let _ = apply_mica(&window, None);
+            }
         }
     }
 }
@@ -74,9 +93,13 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window.hide();
-                let _ = window.emit("toast", "R2 Explorer is still running in the tray.");
+                if let Some(state) = window.try_state::<AppState>() {
+                    if should_close_to_tray(state.inner()) {
+                        api.prevent_close();
+                        let _ = window.hide();
+                        let _ = window.emit("toast", "R2 Explorer is still running in the tray.");
+                    }
+                }
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -88,6 +111,10 @@ pub fn run() {
             commands::crypto::decrypt_connection,
             commands::window::show_main_window,
             commands::window::hide_main_window,
+            commands::window::minimize_main_window,
+            commands::window::toggle_maximize_main_window,
+            commands::window::get_app_settings,
+            commands::window::update_app_settings,
             commands::window::set_startup_enabled,
             commands::file_dialog::open_file_dialog,
             commands::file_dialog::inspect_file_paths,

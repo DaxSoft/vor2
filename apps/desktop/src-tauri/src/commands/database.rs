@@ -92,6 +92,27 @@ fn current_user_id(state: &State<AppState>) -> Result<String, String> {
         .ok_or_else(|| String::from("user session required"))
 }
 
+fn normalize_region(region: &str) -> String {
+    let value = region.trim();
+    if value.is_empty() {
+        String::from("auto")
+    } else {
+        value.to_string()
+    }
+}
+
+fn normalize_endpoint(endpoint: &str) -> Result<String, String> {
+    let value = endpoint.trim().trim_end_matches('/');
+    if value.is_empty() {
+        return Err(String::from("Endpoint is required."));
+    }
+    if value.starts_with("http://") || value.starts_with("https://") {
+        Ok(value.to_string())
+    } else {
+        Ok(format!("https://{value}"))
+    }
+}
+
 async fn make_client(endpoint: &str, region: &str, access_key_id: &str, secret_access_key: &str) -> Result<Client, String> {
     let creds = Credentials::new(
         access_key_id.to_string(),
@@ -155,10 +176,12 @@ pub async fn create_connection(
 ) -> Result<R2ConnectionSafeDto, String> {
     let user_id = current_user_id(&state)?;
     let connection_id = generate_id("conn");
+    let region = normalize_region(&input.region);
+    let endpoint = normalize_endpoint(&input.endpoint)?;
 
     let client = make_client(
-        &input.endpoint,
-        &input.region,
+        &endpoint,
+        &region,
         &input.access_key_id,
         &input.secret_access_key,
     )
@@ -170,9 +193,10 @@ pub async fn create_connection(
         .max_keys(1)
         .send()
         .await
-        .map_err(|_| {
-            String::from(
-                "Could not connect to this R2 bucket. Check the endpoint, bucket name, and access key permissions.",
+        .map_err(|err| {
+            format!(
+                "Could not connect to this R2 bucket: {err}. Verify endpoint `{}`, bucket `{}`, region `{}`, and key permissions.",
+                endpoint, input.bucket_name, region
             )
         })?;
 
@@ -195,20 +219,27 @@ pub async fn create_connection(
             .execute(
                 "INSERT INTO r2_connections (
                     id, user_id, name, account_id, bucket_name, endpoint, public_url, region,
-                    encrypted_access_key_id, encrypted_secret_access_key, encryption_iv, encryption_tag,
+                    encrypted_access_key_id, encrypted_secret_access_key,
+                    encrypted_access_key_iv, encrypted_access_key_tag,
+                    encrypted_secret_access_key_iv, encrypted_secret_access_key_tag,
+                    encryption_iv, encryption_tag,
                     encryption_version, status, last_selected_path
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 1, 'ACTIVE', '/')",
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, 1, 'ACTIVE', '/')",
                 params![
                     connection_id,
                     user_id,
                     input.name,
                     input.account_id,
                     input.bucket_name,
-                    input.endpoint,
+                    endpoint,
                     input.public_url,
-                    input.region,
+                    region,
                     encrypted_access_key.ciphertext,
                     encrypted_secret_key.ciphertext,
+                    encrypted_access_key.iv,
+                    encrypted_access_key.tag,
+                    encrypted_secret_key.iv,
+                    encrypted_secret_key.tag,
                     encrypted_access_key.iv,
                     encrypted_access_key.tag,
                 ],
@@ -230,9 +261,9 @@ pub async fn create_connection(
         id: connection_id,
         name: input.name,
         bucket_name: input.bucket_name,
-        endpoint: input.endpoint,
+        endpoint,
         public_url: input.public_url,
-        region: input.region,
+        region,
         status: String::from("ACTIVE"),
         last_connected_at: None,
         last_selected_path: String::from("/"),
@@ -272,11 +303,25 @@ pub async fn browse_folder(
 ) -> Result<BrowseFolderResult, String> {
     let user_id = current_user_id(&state)?;
 
-    let (endpoint, region, encrypted_access_key_id, encrypted_secret_access_key, encryption_iv, encryption_tag) =
+    let (
+        endpoint,
+        region,
+        encrypted_access_key_id,
+        encrypted_secret_access_key,
+        encrypted_access_key_iv,
+        encrypted_access_key_tag,
+        encrypted_secret_access_key_iv,
+        encrypted_secret_access_key_tag,
+        encryption_iv,
+        encryption_tag,
+    ) =
         with_connection(state.db_path.as_ref(), |connection| {
             let mut stmt = connection
                 .prepare(
-                    "SELECT endpoint, region, encrypted_access_key_id, encrypted_secret_access_key, encryption_iv, encryption_tag
+                    "SELECT endpoint, region, encrypted_access_key_id, encrypted_secret_access_key,
+                            encrypted_access_key_iv, encrypted_access_key_tag,
+                            encrypted_secret_access_key_iv, encrypted_secret_access_key_tag,
+                            encryption_iv, encryption_tag
                      FROM r2_connections WHERE id = ?1 AND user_id = ?2",
                 )
                 .map_err(|err| err.to_string())?;
@@ -289,10 +334,35 @@ pub async fn browse_folder(
                         row.get::<_, String>(3)?,
                         row.get::<_, String>(4)?,
                         row.get::<_, String>(5)?,
+                        row.get::<_, String>(6)?,
+                        row.get::<_, String>(7)?,
+                        row.get::<_, String>(8)?,
+                        row.get::<_, String>(9)?,
                     ))
                 })
                 .map_err(|err| err.to_string())
         })?;
+
+    let access_iv = if encrypted_access_key_iv.is_empty() {
+        encryption_iv.as_str()
+    } else {
+        encrypted_access_key_iv.as_str()
+    };
+    let access_tag = if encrypted_access_key_tag.is_empty() {
+        encryption_tag.as_str()
+    } else {
+        encrypted_access_key_tag.as_str()
+    };
+    let secret_iv = if encrypted_secret_access_key_iv.is_empty() {
+        encryption_iv.as_str()
+    } else {
+        encrypted_secret_access_key_iv.as_str()
+    };
+    let secret_tag = if encrypted_secret_access_key_tag.is_empty() {
+        encryption_tag.as_str()
+    } else {
+        encrypted_secret_access_key_tag.as_str()
+    };
 
     let master_key = get_or_create_master_key(&user_id)?;
     let access_key_id = encryption::decrypt_secret(
@@ -300,8 +370,8 @@ pub async fn browse_folder(
         &user_id,
         &connection_id,
         &encrypted_access_key_id,
-        &encryption_iv,
-        &encryption_tag,
+        access_iv,
+        access_tag,
     )?;
 
     let secret_access_key = encryption::decrypt_secret(
@@ -309,8 +379,8 @@ pub async fn browse_folder(
         &user_id,
         &connection_id,
         &encrypted_secret_access_key,
-        &encryption_iv,
-        &encryption_tag,
+        secret_iv,
+        secret_tag,
     )?;
 
     let client = make_client(&endpoint, &region, &access_key_id, &secret_access_key).await?;
@@ -381,11 +451,25 @@ pub async fn create_folder(
 
     let user_id = current_user_id(&state)?;
 
-    let (endpoint, region, encrypted_access_key_id, encrypted_secret_access_key, encryption_iv, encryption_tag) =
+    let (
+        endpoint,
+        region,
+        encrypted_access_key_id,
+        encrypted_secret_access_key,
+        encrypted_access_key_iv,
+        encrypted_access_key_tag,
+        encrypted_secret_access_key_iv,
+        encrypted_secret_access_key_tag,
+        encryption_iv,
+        encryption_tag,
+    ) =
         with_connection(state.db_path.as_ref(), |connection| {
             let mut stmt = connection
                 .prepare(
-                    "SELECT endpoint, region, encrypted_access_key_id, encrypted_secret_access_key, encryption_iv, encryption_tag
+                    "SELECT endpoint, region, encrypted_access_key_id, encrypted_secret_access_key,
+                            encrypted_access_key_iv, encrypted_access_key_tag,
+                            encrypted_secret_access_key_iv, encrypted_secret_access_key_tag,
+                            encryption_iv, encryption_tag
                      FROM r2_connections WHERE id = ?1 AND user_id = ?2",
                 )
                 .map_err(|err| err.to_string())?;
@@ -398,10 +482,35 @@ pub async fn create_folder(
                         row.get::<_, String>(3)?,
                         row.get::<_, String>(4)?,
                         row.get::<_, String>(5)?,
+                        row.get::<_, String>(6)?,
+                        row.get::<_, String>(7)?,
+                        row.get::<_, String>(8)?,
+                        row.get::<_, String>(9)?,
                     ))
                 })
                 .map_err(|err| err.to_string())
         })?;
+
+    let access_iv = if encrypted_access_key_iv.is_empty() {
+        encryption_iv.as_str()
+    } else {
+        encrypted_access_key_iv.as_str()
+    };
+    let access_tag = if encrypted_access_key_tag.is_empty() {
+        encryption_tag.as_str()
+    } else {
+        encrypted_access_key_tag.as_str()
+    };
+    let secret_iv = if encrypted_secret_access_key_iv.is_empty() {
+        encryption_iv.as_str()
+    } else {
+        encrypted_secret_access_key_iv.as_str()
+    };
+    let secret_tag = if encrypted_secret_access_key_tag.is_empty() {
+        encryption_tag.as_str()
+    } else {
+        encrypted_secret_access_key_tag.as_str()
+    };
 
     let master_key = get_or_create_master_key(&user_id)?;
     let access_key_id = encryption::decrypt_secret(
@@ -409,8 +518,8 @@ pub async fn create_folder(
         &user_id,
         &connection_id,
         &encrypted_access_key_id,
-        &encryption_iv,
-        &encryption_tag,
+        access_iv,
+        access_tag,
     )?;
 
     let secret_access_key = encryption::decrypt_secret(
@@ -418,8 +527,8 @@ pub async fn create_folder(
         &user_id,
         &connection_id,
         &encrypted_secret_access_key,
-        &encryption_iv,
-        &encryption_tag,
+        secret_iv,
+        secret_tag,
     )?;
 
     let client = make_client(&endpoint, &region, &access_key_id, &secret_access_key).await?;

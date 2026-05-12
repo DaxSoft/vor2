@@ -31,18 +31,18 @@ body,
 body {
   font-family: Inter, "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
   color: var(--text);
-  background: #05070d;
+  background: transparent;
 }
 
 .app-background {
   background:
-    radial-gradient(circle at 75% 15%, rgba(36, 136, 255, 0.28), transparent 38%),
-    radial-gradient(circle at 10% 90%, rgba(36, 136, 255, 0.18), transparent 32%),
-    linear-gradient(135deg, #05070d 0%, #0a101c 50%, #05070d 100%);
+    radial-gradient(circle at 75% 15%, rgba(36, 136, 255, 0.22), transparent 38%),
+    radial-gradient(circle at 10% 90%, rgba(36, 136, 255, 0.14), transparent 32%),
+    linear-gradient(135deg, rgba(5, 7, 13, 0.64) 0%, rgba(10, 16, 28, 0.62) 50%, rgba(5, 7, 13, 0.64) 100%);
 }
 
 .glass-shell {
-  background: rgba(8, 12, 20, 0.72);
+  background: rgba(8, 12, 20, 0.56);
   backdrop-filter: blur(34px) saturate(145%);
   -webkit-backdrop-filter: blur(34px) saturate(145%);
   border: 1px solid rgba(255, 255, 255, 0.12);

@@ -7,7 +7,6 @@ use rusqlite::Connection;
 pub struct AppState {
     pub db_path: Arc<PathBuf>,
     pub user_id: Arc<Mutex<Option<String>>>,
-    pub upload_paused: Arc<Mutex<bool>>,
 }
 
 impl AppState {
@@ -18,7 +17,6 @@ impl AppState {
         Ok(Self {
             db_path: Arc::new(db_path),
             user_id: Arc::new(Mutex::new(None)),
-            upload_paused: Arc::new(Mutex::new(false)),
         })
     }
 }
@@ -43,6 +41,10 @@ fn init_database(db_path: &PathBuf) -> Result<(), String> {
             region TEXT NOT NULL DEFAULT 'auto',
             encrypted_access_key_id TEXT NOT NULL,
             encrypted_secret_access_key TEXT NOT NULL,
+            encrypted_access_key_iv TEXT NOT NULL DEFAULT '',
+            encrypted_access_key_tag TEXT NOT NULL DEFAULT '',
+            encrypted_secret_access_key_iv TEXT NOT NULL DEFAULT '',
+            encrypted_secret_access_key_tag TEXT NOT NULL DEFAULT '',
             encryption_iv TEXT NOT NULL,
             encryption_tag TEXT NOT NULL,
             encryption_version INTEGER NOT NULL DEFAULT 1,
@@ -98,5 +100,57 @@ fn init_database(db_path: &PathBuf) -> Result<(), String> {
         ",
     )
     .map_err(|err| err.to_string())?;
+
+    ensure_column(
+        &connection,
+        "r2_connections",
+        "encrypted_access_key_iv",
+        "TEXT NOT NULL DEFAULT ''",
+    )?;
+    ensure_column(
+        &connection,
+        "r2_connections",
+        "encrypted_access_key_tag",
+        "TEXT NOT NULL DEFAULT ''",
+    )?;
+    ensure_column(
+        &connection,
+        "r2_connections",
+        "encrypted_secret_access_key_iv",
+        "TEXT NOT NULL DEFAULT ''",
+    )?;
+    ensure_column(
+        &connection,
+        "r2_connections",
+        "encrypted_secret_access_key_tag",
+        "TEXT NOT NULL DEFAULT ''",
+    )?;
+
+    Ok(())
+}
+
+fn ensure_column(connection: &Connection, table: &str, column: &str, definition: &str) -> Result<(), String> {
+    let mut stmt = connection
+        .prepare(&format!("PRAGMA table_info({table})"))
+        .map_err(|err| err.to_string())?;
+    let rows = stmt
+        .query_map([], |row| row.get::<_, String>(1))
+        .map_err(|err| err.to_string())?;
+
+    let exists = rows
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|err| err.to_string())?
+        .into_iter()
+        .any(|name| name == column);
+
+    if !exists {
+        connection
+            .execute(
+                &format!("ALTER TABLE {table} ADD COLUMN {column} {definition}"),
+                [],
+            )
+            .map_err(|err| err.to_string())?;
+    }
+
     Ok(())
 }

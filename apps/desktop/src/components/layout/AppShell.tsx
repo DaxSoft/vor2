@@ -5,9 +5,11 @@ import { Sidebar } from "./Sidebar";
 import { TitleBar } from "./TitleBar";
 import { ExplorerView } from "@/features/explorer/ExplorerView";
 import { UploadQueue } from "@/features/uploads/UploadQueue";
+import { ConnectionForm } from "@/features/connections/ConnectionForm";
 import { useExplorerStore } from "@/features/explorer/explorer.store";
 import { useConnectionStore } from "@/features/connections/connection.store";
 import { useUploadStore } from "@/features/uploads/upload.store";
+import { SettingsView } from "@/features/settings/SettingsView";
 import { bindTrayEvents } from "@/features/tray/tray.events";
 import { closeToTray, minimizeWindow, toggleMaximizeWindow } from "@/lib/desktop-window";
 
@@ -32,6 +34,8 @@ export function AppShell() {
   const isQueuePaused = useUploadStore((state) => state.isPaused);
   const [search, setSearch] = useState("");
   const [folderName, setFolderName] = useState("New folder");
+  const [showSettings, setShowSettings] = useState(false);
+  const [showConnectionForm, setShowConnectionForm] = useState(false);
 
   const activeConnection = connections.find((item) => item.id === activeConnectionId) ?? null;
 
@@ -52,6 +56,14 @@ export function AppShell() {
           return;
         }
         pauseAll();
+        return;
+      }
+      if (action === "settings") {
+        setShowSettings(true);
+        return;
+      }
+      if (action === "connections") {
+        setShowConnectionForm(true);
       }
     }).then((items) => {
       unsubscribers.push(...items);
@@ -104,7 +116,7 @@ export function AppShell() {
   );
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-[#05070d] text-[#f5f8ff] app-background">
+    <div className="h-screen w-screen overflow-hidden text-[#f5f8ff] app-background">
       <div className="mx-4 my-4 flex h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-app glass-shell">
         <TitleBar
           search={search}
@@ -119,6 +131,9 @@ export function AppShell() {
           onRefresh={() => {
             void refresh();
           }}
+          onOpenSettings={() => {
+            setShowSettings(true);
+          }}
           onMinimize={() => {
             void minimizeWindow();
           }}
@@ -131,7 +146,14 @@ export function AppShell() {
         />
 
         <div className="grid min-h-0 flex-1 grid-cols-[280px_1fr] gap-3 p-3">
-          <Sidebar onAddConnection={() => undefined} />
+          <Sidebar
+            onAddConnection={() => {
+              setShowConnectionForm(true);
+            }}
+            onOpenSettings={() => {
+              setShowSettings(true);
+            }}
+          />
           <div className="flex min-h-0 flex-col gap-3">
             <ExplorerView />
             <UploadQueue
@@ -142,6 +164,37 @@ export function AppShell() {
           </div>
         </div>
       </div>
+
+      {showSettings ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/45 p-4">
+          <SettingsView
+            onClose={() => {
+              setShowSettings(false);
+            }}
+          />
+        </div>
+      ) : null}
+
+      {showConnectionForm ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/45 p-4">
+          <div className="glass-shell w-full max-w-xl rounded-app p-6">
+            <ConnectionForm
+              onCreated={() => {
+                setShowConnectionForm(false);
+              }}
+            />
+            <button
+              type="button"
+              className="mt-3 w-full rounded border border-app-border px-3 py-2 text-xs text-app-text hover:border-accent"
+              onClick={() => {
+                setShowConnectionForm(false);
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -2,6 +2,16 @@ import { create } from "zustand";
 import { explorerService } from "./explorer.service";
 import type { ExplorerStoreState } from "./explorer.types";
 
+function toErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+  return fallback;
+}
+
 function parentPath(path: string): string {
   const clean = path.replace(/\/$/, "").replace(/^\//, "");
   if (!clean) {
@@ -37,10 +47,13 @@ export const useExplorerStore = create<ExplorerStoreState>((set, get) => ({
     try {
       const nodes = await explorerService.browse(state.activeConnectionId, state.bucketName, path);
       set({ nodes, isLoading: false, selectedNodeId: null });
-    } catch {
+    } catch (error) {
       set({
         isLoading: false,
-        error: "Could not connect to this R2 bucket. Check the endpoint, bucket name, and access key permissions."
+        error: toErrorMessage(
+          error,
+          "Could not connect to this R2 bucket. Check the endpoint, bucket name, and access key permissions."
+        )
       });
     }
   },

@@ -1,7 +1,13 @@
 import { Settings } from "lucide-react";
 import { ConnectionSwitcher } from "@/features/connections/ConnectionSwitcher";
 
-export function Sidebar({ onAddConnection }: { onAddConnection: () => void }) {
+export function Sidebar({
+  onAddConnection,
+  onOpenSettings
+}: {
+  onAddConnection: () => void;
+  onOpenSettings: () => void;
+}) {
   return (
     <aside className="glass-panel rounded-panel border border-app-border p-3">
       <ConnectionSwitcher onAddConnection={onAddConnection} />
@@ -11,7 +17,11 @@ export function Sidebar({ onAddConnection }: { onAddConnection: () => void }) {
         <p className="mt-1 text-sm font-semibold text-app-text">R2 Bucket</p>
       </div>
 
-      <button type="button" className="mt-4 inline-flex items-center gap-2 text-xs text-app-muted hover:text-app-text">
+      <button
+        type="button"
+        className="mt-4 inline-flex items-center gap-2 text-xs text-app-muted hover:text-app-text"
+        onClick={onOpenSettings}
+      >
         <Settings className="h-4 w-4" />
         Settings
       </button>

@@ -1,5 +1,7 @@
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce};
+use base64::engine::general_purpose::STANDARD as BASE64;
+use base64::Engine;
 use hkdf::Hkdf;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
@@ -45,9 +47,9 @@ pub fn encrypt_secret(master_key: &[u8], user_id: &str, connection_id: &str, val
     Ok(EncryptedSecretDto {
         version: 1,
         algorithm: String::from("AES-256-GCM"),
-        ciphertext: base64::encode(ciphertext),
-        iv: base64::encode(iv),
-        tag: base64::encode(tag),
+        ciphertext: BASE64.encode(ciphertext),
+        iv: BASE64.encode(iv),
+        tag: BASE64.encode(tag),
     })
 }
 
@@ -62,13 +64,13 @@ pub fn decrypt_secret(
     let key = derive_key(master_key, user_id, connection_id)?;
     let cipher = Aes256Gcm::new_from_slice(&key).map_err(|err| err.to_string())?;
 
-    let iv_bytes = base64::decode(iv).map_err(|err| err.to_string())?;
+    let iv_bytes = BASE64.decode(iv).map_err(|err| err.to_string())?;
     if iv_bytes.len() != 12 {
         return Err(String::from("invalid iv"));
     }
 
-    let mut payload = base64::decode(ciphertext).map_err(|err| err.to_string())?;
-    payload.extend(base64::decode(tag).map_err(|err| err.to_string())?);
+    let mut payload = BASE64.decode(ciphertext).map_err(|err| err.to_string())?;
+    payload.extend(BASE64.decode(tag).map_err(|err| err.to_string())?);
 
     let decrypted = cipher
         .decrypt(Nonce::from_slice(&iv_bytes), payload.as_ref())
