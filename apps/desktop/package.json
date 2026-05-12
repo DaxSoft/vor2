@@ -12,9 +12,7 @@
     "preview": "vite preview",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "test:desktop": "yarn typecheck && cargo check --manifest-path src-tauri/Cargo.toml",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "test:desktop": "yarn typecheck && cargo check --manifest-path src-tauri/Cargo.toml"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "latest",

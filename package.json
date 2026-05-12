@@ -16,8 +16,8 @@
     "desktop:test": "yarn workspace @r2-explorer/desktop test:desktop",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "prisma:generate": "yarn workspace @r2-explorer/desktop prisma:generate",
-    "prisma:migrate": "yarn workspace @r2-explorer/desktop prisma:migrate"
+    "prisma:generate": "yarn workspace @r2-explorer/database prisma:generate",
+    "prisma:migrate": "yarn workspace @r2-explorer/database prisma:migrate"
   },
   "devDependencies": {
     "turbo": "^2.0.12"
