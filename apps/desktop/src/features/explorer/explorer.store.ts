@@ -101,6 +101,18 @@ export const useExplorerStore = create<ExplorerStoreState>((set, get) => ({
     }
     await get().refresh();
   },
+  async renameNode(oldKey, newKey) {
+    const state = get();
+    if (!state.activeConnectionId) {
+      return;
+    }
+    if (oldKey.endsWith("/")) {
+      await explorerService.renamePrefix(state.activeConnectionId, state.bucketName, oldKey, newKey);
+    } else {
+      await explorerService.renameObject(state.activeConnectionId, state.bucketName, oldKey, newKey);
+    }
+    await get().refresh();
+  },
   setSearchQuery(query) {
     set({ searchQuery: query });
   },

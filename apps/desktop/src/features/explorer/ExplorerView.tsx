@@ -1,4 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
+import {
+  Copy,
+  Download,
+  FolderPlus,
+  PencilLine,
+  RefreshCw,
+  Share2,
+  Trash2,
+  UploadCloud
+} from "lucide-react";
 import { buildPublicUrl } from "@r2-explorer/r2/src/path-utils";
 import { Breadcrumb } from "./Breadcrumb";
 import { DetailsPanel } from "./DetailsPanel";
@@ -8,7 +18,23 @@ import { useExplorerStore } from "./explorer.store";
 import { useConnectionStore } from "@/features/connections/connection.store";
 import type { R2ExplorerNode } from "./explorer.types";
 
-export function ExplorerView() {
+interface ExplorerViewProps {
+  onUpload: () => void;
+  onNewFolder: () => void;
+}
+
+interface NodeContextMenuState {
+  x: number;
+  y: number;
+  node: R2ExplorerNode;
+}
+
+interface BackgroundContextMenuState {
+  x: number;
+  y: number;
+}
+
+export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
   const nodes = useExplorerStore((state) => state.nodes);
   const currentPath = useExplorerStore((state) => state.currentPath);
   const selectedNodeId = useExplorerStore((state) => state.selectedNodeId);
@@ -19,9 +45,11 @@ export function ExplorerView() {
   const loadPath = useExplorerStore((state) => state.loadPath);
   const openNode = useExplorerStore((state) => state.openNode);
   const selectNode = useExplorerStore((state) => state.selectNode);
+  const renameNode = useExplorerStore((state) => state.renameNode);
   const activeConnectionId = useConnectionStore((state) => state.activeConnectionId);
   const connections = useConnectionStore((state) => state.items);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: R2ExplorerNode } | null>(null);
+  const [nodeMenu, setNodeMenu] = useState<NodeContextMenuState | null>(null);
+  const [backgroundMenu, setBackgroundMenu] = useState<BackgroundContextMenuState | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<R2ExplorerNode | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -40,8 +68,13 @@ export function ExplorerView() {
   const selectedFile = selectedNode?.kind === "file" ? selectedNode : null;
   const activeConnection = connections.find((item) => item.id === activeConnectionId) ?? null;
 
+  const closeMenus = () => {
+    setNodeMenu(null);
+    setBackgroundMenu(null);
+  };
+
   useEffect(() => {
-    const onClick = () => setContextMenu(null);
+    const onClick = () => closeMenus();
     window.addEventListener("click", onClick);
     return () => window.removeEventListener("click", onClick);
   }, []);
@@ -72,6 +105,7 @@ export function ExplorerView() {
     if (!activeConnectionId || !activeConnection) {
       return;
     }
+
     if (node.kind === "file") {
       if (!node.publicUrl) {
         setMessage("No public URL configured for this file.");
@@ -96,6 +130,31 @@ export function ExplorerView() {
     setMessage(keys.length === 0 ? "Folder is empty." : `Opened ${keys.length} file download(s).`);
   };
 
+  const buildRenamedKey = (node: R2ExplorerNode, nextName: string): string => {
+    if (node.kind === "folder") {
+      const trimmed = node.key.replace(/\/$/, "");
+      const parts = trimmed.split("/");
+      parts.pop();
+      const parent = parts.join("/");
+      return `${parent ? `${parent}/` : ""}${nextName}/`;
+    }
+    const parts = node.key.split("/");
+    parts.pop();
+    const parent = parts.join("/");
+    return `${parent ? `${parent}/` : ""}${nextName}`;
+  };
+
+  const rename = async (node: R2ExplorerNode) => {
+    const currentName = node.name;
+    const nextName = window.prompt("Rename to", currentName)?.trim();
+    if (!nextName || nextName === currentName) {
+      return;
+    }
+    const newKey = buildRenamedKey(node, nextName);
+    await renameNode(node.key, newKey);
+    setMessage("Renamed.");
+  };
+
   const executeDelete = async () => {
     if (!confirmDelete) {
       return;
@@ -105,9 +164,34 @@ export function ExplorerView() {
     setMessage(confirmDelete.kind === "folder" ? "Folder and subcontent deleted." : "File deleted.");
   };
 
+  const runNodeAction = (action: (node: R2ExplorerNode) => Promise<void> | void) => {
+    const menu = nodeMenu;
+    closeMenus();
+    if (!menu) {
+      return;
+    }
+    void action(menu.node);
+  };
+
+  const runBackgroundAction = (action: () => Promise<void> | void) => {
+    closeMenus();
+    void action();
+  };
+
   return (
     <div className={`grid min-h-0 flex-1 gap-3 ${selectedFile ? "grid-cols-[1fr_320px]" : "grid-cols-1"}`}>
-      <section className="glass-panel flex min-h-0 flex-col rounded-panel border border-app-border p-3">
+      <section
+        className="glass-panel flex min-h-0 flex-col rounded-panel border border-app-border p-3"
+        onContextMenu={(event) => {
+          const target = event.target as HTMLElement;
+          if (target.closest("tbody tr")) {
+            return;
+          }
+          event.preventDefault();
+          setBackgroundMenu({ x: event.clientX, y: event.clientY });
+          setNodeMenu(null);
+        }}
+      >
         <div className="mb-3">
           <Breadcrumb currentPath={currentPath} onOpen={(path) => void loadPath(path)} />
         </div>
@@ -122,7 +206,8 @@ export function ExplorerView() {
               onOpen={(id) => void openNode(id)}
               onContextMenu={(event, node) => {
                 event.preventDefault();
-                setContextMenu({ x: event.clientX, y: event.clientY, node });
+                setNodeMenu({ x: event.clientX, y: event.clientY, node });
+                setBackgroundMenu(null);
               }}
             />
           ) : null}
@@ -134,48 +219,102 @@ export function ExplorerView() {
         <aside className="glass-panel rounded-panel border border-app-border p-3">
           <DetailsPanel
             node={selectedFile}
-            onDelete={async (_key) => {
+            onDelete={async () => {
               setConfirmDelete(selectedFile);
             }}
           />
         </aside>
       ) : null}
 
-      {contextMenu ? (
+      {nodeMenu ? (
         <div
-          className="glass-panel fixed z-50 min-w-44 rounded-lg border border-app-border p-1 text-xs"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
+          className="glass-shell fixed z-50 min-w-52 rounded-xl border border-white/20 p-1.5 text-xs shadow-[0_14px_36px_rgba(0,0,0,0.45)]"
+          style={{ left: nodeMenu.x, top: nodeMenu.y }}
           onClick={(event) => event.stopPropagation()}
         >
-          {contextMenu.node.kind === "file" ? (
+          {nodeMenu.node.kind === "file" ? (
             <>
-              <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={() => void copyUrl(contextMenu.node)}>Copy URL</button>
-              <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={() => void shareNode(contextMenu.node)}>Share</button>
-              <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={() => void downloadNode(contextMenu.node)}>Download</button>
+              <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10" onClick={() => runNodeAction(copyUrl)}>
+                <Copy className="h-3.5 w-3.5 text-app-muted" />
+                Copy URL
+              </button>
+              <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10" onClick={() => runNodeAction(shareNode)}>
+                <Share2 className="h-3.5 w-3.5 text-app-muted" />
+                Share
+              </button>
+              <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10" onClick={() => runNodeAction(downloadNode)}>
+                <Download className="h-3.5 w-3.5 text-app-muted" />
+                Download
+              </button>
+              <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10" onClick={() => runNodeAction(rename)}>
+                <PencilLine className="h-3.5 w-3.5 text-app-muted" />
+                Rename
+              </button>
               <button
-                className="block w-full rounded px-2 py-1 text-left text-rose-300 hover:bg-rose-500/20"
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-rose-200 hover:bg-rose-500/20"
                 onClick={() => {
-                  setConfirmDelete(contextMenu.node);
-                  setContextMenu(null);
+                  const node = nodeMenu.node;
+                  closeMenus();
+                  setConfirmDelete(node);
                 }}
               >
+                <Trash2 className="h-3.5 w-3.5" />
                 Delete
               </button>
             </>
           ) : (
             <>
-              <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={() => void downloadNode(contextMenu.node)}>Download</button>
+              <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10" onClick={() => runNodeAction(downloadNode)}>
+                <Download className="h-3.5 w-3.5 text-app-muted" />
+                Download
+              </button>
+              <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10" onClick={() => runNodeAction(rename)}>
+                <PencilLine className="h-3.5 w-3.5 text-app-muted" />
+                Rename
+              </button>
               <button
-                className="block w-full rounded px-2 py-1 text-left text-rose-300 hover:bg-rose-500/20"
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-rose-200 hover:bg-rose-500/20"
                 onClick={() => {
-                  setConfirmDelete(contextMenu.node);
-                  setContextMenu(null);
+                  const node = nodeMenu.node;
+                  closeMenus();
+                  setConfirmDelete(node);
                 }}
               >
+                <Trash2 className="h-3.5 w-3.5" />
                 Delete
               </button>
             </>
           )}
+        </div>
+      ) : null}
+
+      {backgroundMenu ? (
+        <div
+          className="glass-shell fixed z-50 min-w-44 rounded-xl border border-white/20 p-1.5 text-xs shadow-[0_14px_36px_rgba(0,0,0,0.45)]"
+          style={{ left: backgroundMenu.x, top: backgroundMenu.y }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+            onClick={() => runBackgroundAction(async () => loadPath(currentPath))}
+          >
+            <RefreshCw className="h-3.5 w-3.5 text-app-muted" />
+            Refresh
+          </button>
+          <button
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+            onClick={() => runBackgroundAction(onUpload)}
+          >
+            <UploadCloud className="h-3.5 w-3.5 text-app-muted" />
+            Upload
+          </button>
+          <button
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+            onClick={() => runBackgroundAction(onNewFolder)}
+          >
+            <FolderPlus className="h-3.5 w-3.5 text-app-muted" />
+            New folder
+          </button>
         </div>
       ) : null}
 
@@ -193,7 +332,10 @@ export function ExplorerView() {
               <button className="rounded border border-app-border px-3 py-1.5 text-xs" onClick={() => setConfirmDelete(null)}>
                 Cancel
               </button>
-              <button className="rounded border border-rose-500/40 bg-rose-500/20 px-3 py-1.5 text-xs text-rose-200" onClick={() => void executeDelete()}>
+              <button
+                className="rounded border border-rose-500/40 bg-rose-500/20 px-3 py-1.5 text-xs text-rose-200"
+                onClick={() => void executeDelete()}
+              >
                 Confirm delete
               </button>
             </div>

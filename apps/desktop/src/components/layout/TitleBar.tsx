@@ -43,8 +43,8 @@ export function TitleBar({
       }}
     >
       <div className="flex items-center gap-2" data-no-drag="true">
-        <img src={logoMark} alt="R2 Explorer" className="h-4 w-4" />
-        <span className="text-sm font-semibold text-app-text">R2 Explorer</span>
+        <img src={logoMark} alt="vor2" className="h-4 w-4" />
+        <span className="text-sm font-semibold text-app-text">vor2</span>
       </div>
 
       <label data-no-drag="true" className="relative ml-2 flex-1">

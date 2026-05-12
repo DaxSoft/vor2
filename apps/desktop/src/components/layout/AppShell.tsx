@@ -77,13 +77,13 @@ export function AppShell() {
       if (event.payload.type !== "drop") {
         return;
       }
-    if (!activeConnection) {
-      return;
-    }
-    setQueueVisible(true);
-    const entries = await invoke<FileDialogEntry[]>("inspect_file_paths", { paths: event.payload.paths });
-    await addPathEntries(entries, currentPath, activeConnection.id, activeConnection.bucketName);
-    await refresh();
+      if (!activeConnection) {
+        return;
+      }
+      setQueueVisible(true);
+      const entries = await invoke<FileDialogEntry[]>("inspect_file_paths", { paths: event.payload.paths });
+      await addPathEntries(entries, currentPath, activeConnection.id, activeConnection.bucketName);
+      await refresh();
     }).then((unlisten) => {
       unsubscribers.push(unlisten);
     });
@@ -93,7 +93,7 @@ export function AppShell() {
         unlisten();
       }
     };
-  }, [activeConnection, addPathEntries, currentPath, isQueuePaused, pauseAll, resumeAll, setQueueVisible]);
+  }, [activeConnection, addPathEntries, currentPath, isQueuePaused, pauseAll, refresh, resumeAll, setQueueVisible]);
 
   const onUpload = useMemo(
     () => async () => {
@@ -172,7 +172,12 @@ export function AppShell() {
             />
           ) : null}
           <div className="flex min-h-0 flex-col gap-3">
-            <ExplorerView />
+            <ExplorerView
+              onUpload={() => {
+                void onUpload();
+              }}
+              onNewFolder={onNewFolder}
+            />
             {isQueueVisible || uploadTasks.length > 0 ? (
               <UploadQueue
                 onPickFiles={() => {

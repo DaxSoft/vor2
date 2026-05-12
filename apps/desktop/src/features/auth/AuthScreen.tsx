@@ -17,10 +17,10 @@ export function AuthScreen() {
       <div className="glass-shell w-full max-w-lg rounded-app p-8">
         <div className="mb-8 flex items-center gap-3">
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent">
-            <img src={logoMark} alt="R2 Explorer" className="h-5 w-5" />
+            <img src={logoMark} alt="vor2" className="h-5 w-5" />
           </span>
           <div>
-            <h1 className="text-sm font-semibold text-app-text">R2 Explorer</h1>
+            <h1 className="text-sm font-semibold text-app-text">vor2</h1>
             <p className="text-xs text-app-muted">Your Cloudflare R2 files, one click away.</p>
           </div>
         </div>

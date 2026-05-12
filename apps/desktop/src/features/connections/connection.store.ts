@@ -17,6 +17,7 @@ export const useConnectionStore = create<ConnectionStoreState>((set, get) => ({
   items: [],
   activeConnectionId: null,
   isLoading: false,
+  hasHydrated: false,
   error: null,
   async hydrate() {
     set({ isLoading: true, error: null });
@@ -25,7 +26,8 @@ export const useConnectionStore = create<ConnectionStoreState>((set, get) => ({
       set({
         items,
         activeConnectionId: items.find((item) => item.status === "ACTIVE")?.id ?? items[0]?.id ?? null,
-        isLoading: false
+        isLoading: false,
+        hasHydrated: true
       });
     } catch (error) {
       set({
@@ -33,7 +35,8 @@ export const useConnectionStore = create<ConnectionStoreState>((set, get) => ({
           error,
           "Could not connect to this R2 bucket. Check the endpoint, bucket name, and access key permissions."
         ),
-        isLoading: false
+        isLoading: false,
+        hasHydrated: true
       });
     }
   },

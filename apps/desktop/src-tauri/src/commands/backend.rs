@@ -388,6 +388,44 @@ pub async fn list_prefix_objects(
 }
 
 #[tauri::command]
+pub async fn rename_object(
+    connection_id: String,
+    bucket_name: String,
+    old_key: String,
+    new_key: String,
+) -> Result<(), String> {
+    let _: Value = run_bridge(
+        "rename_object",
+        serde_json::json!({
+            "connectionId": connection_id,
+            "bucketName": bucket_name,
+            "oldKey": old_key,
+            "newKey": new_key
+        }),
+    )?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn rename_prefix(
+    connection_id: String,
+    bucket_name: String,
+    old_prefix: String,
+    new_prefix: String,
+) -> Result<(), String> {
+    let _: Value = run_bridge(
+        "rename_prefix",
+        serde_json::json!({
+            "connectionId": connection_id,
+            "bucketName": bucket_name,
+            "oldPrefix": old_prefix,
+            "newPrefix": new_prefix
+        }),
+    )?;
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn enqueue_uploads(
     connection_id: String,
     bucket_name: String,

@@ -57,5 +57,23 @@ export const explorerService = {
       prefix
     });
     return result.keys;
+  },
+
+  async renameObject(connectionId: string, bucketName: string, oldKey: string, newKey: string): Promise<void> {
+    await invoke("rename_object", {
+      connectionId,
+      bucketName,
+      oldKey,
+      newKey
+    });
+  },
+
+  async renamePrefix(connectionId: string, bucketName: string, oldPrefix: string, newPrefix: string): Promise<void> {
+    await invoke("rename_prefix", {
+      connectionId,
+      bucketName,
+      oldPrefix,
+      newPrefix
+    });
   }
 };

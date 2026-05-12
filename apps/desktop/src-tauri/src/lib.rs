@@ -77,6 +77,8 @@ pub fn run() {
             commands::backend::delete_object,
             commands::backend::delete_prefix,
             commands::backend::list_prefix_objects,
+            commands::backend::rename_object,
+            commands::backend::rename_prefix,
             commands::backend::enqueue_uploads
         ])
         .run(tauri::generate_context!())

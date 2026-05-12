@@ -25,6 +25,7 @@ export interface ConnectionStoreState {
   items: R2ConnectionSafe[];
   activeConnectionId: string | null;
   isLoading: boolean;
+  hasHydrated: boolean;
   error: string | null;
   hydrate: () => Promise<void>;
   createConnection: (input: R2ConnectionCreateInput) => Promise<void>;

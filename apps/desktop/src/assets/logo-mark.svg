@@ -1,15 +1,22 @@
 <svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg" x1="18" y1="12" x2="110" y2="118" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#43A6FF"/>
-      <stop offset="1" stop-color="#1768FF"/>
+    <linearGradient id="vor2bg" x1="12" y1="10" x2="114" y2="118" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1E88FF"/>
+      <stop offset="1" stop-color="#0B2F63"/>
     </linearGradient>
-    <linearGradient id="accent" x1="36" y1="38" x2="97" y2="96" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#EAF6FF"/>
-      <stop offset="1" stop-color="#B8D8FF"/>
+    <linearGradient id="vor2v" x1="36" y1="34" x2="72" y2="92" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7FBFF"/>
+      <stop offset="1" stop-color="#D2E5FF"/>
+    </linearGradient>
+    <linearGradient id="vor2r2" x1="60" y1="46" x2="96" y2="88" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A8D6FF"/>
+      <stop offset="1" stop-color="#5DA9FF"/>
     </linearGradient>
   </defs>
-  <rect x="8" y="8" width="112" height="112" rx="30" fill="url(#bg)"/>
-  <path d="M40 88V38H68C84 38 94 47 94 62C94 76 83 86 67 86H53V88H40ZM53 74H65C72 74 80 71 80 62C80 53 72 50 65 50H53V74Z" fill="url(#accent)"/>
-  <path d="M31 96L45 82H58L44 96H31Z" fill="#EAF6FF" fill-opacity="0.8"/>
+  <rect x="10" y="10" width="108" height="108" rx="28" fill="url(#vor2bg)"/>
+  <rect x="10" y="10" width="108" height="108" rx="28" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+  <path d="M31 40.5L45.5 89.5C46.6 93.1 51.7 93.3 53.1 89.8L66.8 55.1C67.7 52.9 70.8 52.9 71.7 55.1L85.4 89.8C86.8 93.3 91.9 93.1 93 89.5L97 76.2"
+        stroke="url(#vor2v)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M77 33H92.5C96.7 33 100 36.3 100 40.5C100 44.7 96.7 48 92.5 48H86.2C82.2 48 79 51.2 79 55.2C79 59.2 82.2 62.4 86.2 62.4H93"
+        stroke="url(#vor2r2)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

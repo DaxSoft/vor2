@@ -51,6 +51,7 @@ export interface ExplorerStoreState {
   goParent: () => Promise<void>;
   createFolder: (name: string) => Promise<void>;
   deleteNode: (key: string) => Promise<void>;
+  renameNode: (oldKey: string, newKey: string) => Promise<void>;
   setSearchQuery: (query: string) => void;
   setSort: (sortBy: SortBy, direction: "asc" | "desc") => void;
   setActiveConnection: (connectionId: string, bucketName: string, publicUrl?: string) => void;

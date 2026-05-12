@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
-import { DeleteObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { CopyObjectCommand, DeleteObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { prisma } from "./client";
 
 type Json = Record<string, unknown>;
@@ -369,7 +369,9 @@ async function run(action: string, payload: Json): Promise<unknown> {
     case "create_folder":
     case "delete_object":
     case "delete_prefix":
-    case "list_prefix_objects": {
+    case "list_prefix_objects":
+    case "rename_object":
+    case "rename_prefix": {
       const userId = await currentUserId();
       const connectionId = String(payload.connectionId);
       const rows = await prisma.$queryRawUnsafe<
@@ -455,6 +457,49 @@ async function run(action: string, payload: Json): Promise<unknown> {
         const normalizedPrefix = prefix.endsWith("/") ? prefix : `${prefix}/`;
         const objects = await listAllObjects(client, String(payload.bucketName), normalizedPrefix);
         return { keys: objects.map((object) => object.key) };
+      }
+
+      if (action === "rename_object") {
+        const oldKey = String(payload.oldKey ?? "").replace(/^\/+/, "");
+        const newKey = String(payload.newKey ?? "").replace(/^\/+/, "");
+        if (!oldKey || !newKey) {
+          throw new Error("Both old and new key are required.");
+        }
+        await client.send(
+          new CopyObjectCommand({
+            Bucket: String(payload.bucketName),
+            Key: newKey,
+            CopySource: `${String(payload.bucketName)}/${oldKey}`
+          })
+        );
+        await client.send(new DeleteObjectCommand({ Bucket: String(payload.bucketName), Key: oldKey }));
+        return null;
+      }
+
+      if (action === "rename_prefix") {
+        const oldPrefixRaw = String(payload.oldPrefix ?? "").replace(/^\/+/, "");
+        const newPrefixRaw = String(payload.newPrefix ?? "").replace(/^\/+/, "");
+        const oldPrefix = oldPrefixRaw.endsWith("/") ? oldPrefixRaw : `${oldPrefixRaw}/`;
+        const newPrefix = newPrefixRaw.endsWith("/") ? newPrefixRaw : `${newPrefixRaw}/`;
+        if (!oldPrefixRaw || !newPrefixRaw) {
+          throw new Error("Both old and new folder names are required.");
+        }
+        const objects = await listAllObjects(client, String(payload.bucketName), oldPrefix);
+        for (const object of objects) {
+          const suffix = object.key.slice(oldPrefix.length);
+          const newKey = `${newPrefix}${suffix}`;
+          await client.send(
+            new CopyObjectCommand({
+              Bucket: String(payload.bucketName),
+              Key: newKey,
+              CopySource: `${String(payload.bucketName)}/${object.key}`
+            })
+          );
+          await client.send(new DeleteObjectCommand({ Bucket: String(payload.bucketName), Key: object.key }));
+        }
+        await client.send(new PutObjectCommand({ Bucket: String(payload.bucketName), Key: newPrefix, Body: "" }));
+        await client.send(new DeleteObjectCommand({ Bucket: String(payload.bucketName), Key: oldPrefix }));
+        return null;
       }
 
       const pathValue = String(payload.path ?? "").replace(/^\/+|\/+$/g, "");
