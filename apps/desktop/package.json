@@ -27,7 +27,6 @@
     "@tauri-apps/plugin-dialog": "latest",
     "@tauri-apps/plugin-opener": "latest",
     "@types/better-sqlite3": "^7.6.13",
-    "better-auth": "latest",
     "clsx": "latest",
     "lucide-react": "latest",
     "motion": "latest",

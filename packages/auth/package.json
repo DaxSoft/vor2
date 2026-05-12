@@ -3,11 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "src/auth.ts",
-  "types": "src/auth.ts",
+  "main": "src/auth-client.ts",
+  "types": "src/auth-client.ts",
   "dependencies": {
-    "@r2-explorer/database": "0.1.0",
-    "@tauri-apps/api": "latest",
-    "better-auth": "latest"
+    "@tauri-apps/api": "latest"
   }
 }

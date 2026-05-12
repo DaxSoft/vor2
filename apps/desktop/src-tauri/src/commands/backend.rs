@@ -122,7 +122,17 @@ fn run_bridge<T: for<'de> Deserialize<'de>>(action: &str, payload: Value) -> Res
     }
 
     let stdout = String::from_utf8(output.stdout).map_err(|err| err.to_string())?;
-    let parsed: Value = serde_json::from_str(stdout.trim()).map_err(|err| err.to_string())?;
+    let parsed = stdout
+        .lines()
+        .rev()
+        .find_map(|line| {
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                return None;
+            }
+            serde_json::from_str::<Value>(trimmed).ok()
+        })
+        .ok_or_else(|| String::from("Invalid backend response from Prisma bridge."))?;
     let ok = parsed
         .get("ok")
         .and_then(|value| value.as_bool())

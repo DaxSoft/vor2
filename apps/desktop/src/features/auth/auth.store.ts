@@ -12,8 +12,9 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
     try {
       const session = await authService.getSession();
       set({ session, isLocked: false, isLoading: false });
-    } catch {
-      set({ session: null, isLoading: false, error: "Sign-in failed." });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Sign-in failed.";
+      set({ session: null, isLoading: false, error: message });
     }
   },
   async signInWithPassword(username, password) {
@@ -21,8 +22,9 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
     try {
       const session = await authService.signInWithPassword(username, password);
       set({ session, isLoading: false, isLocked: false });
-    } catch {
-      set({ isLoading: false, error: "Invalid username or password." });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid username or password.";
+      set({ isLoading: false, error: message });
     }
   },
   async signUpWithPassword(username, password) {
@@ -30,8 +32,10 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
     try {
       const session = await authService.signUpWithPassword(username, password);
       set({ session, isLoading: false, isLocked: false });
-    } catch {
-      set({ isLoading: false, error: "Could not create account with those credentials." });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not create account with those credentials.";
+      set({ isLoading: false, error: message });
     }
   },
   async signOut() {
@@ -43,8 +47,9 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
     try {
       await authService.deleteAccount();
       set({ session: null, isLocked: true, isLoading: false });
-    } catch {
-      set({ isLoading: false, error: "Could not delete account." });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not delete account.";
+      set({ isLoading: false, error: message });
     }
   },
   lock() {
