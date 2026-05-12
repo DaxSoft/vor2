@@ -1,27 +1,18 @@
-import type { DragEvent } from "react";
-
 export function UploadDropzone({
-  onFiles
+  onPickFiles
 }: {
-  onFiles: (files: File[]) => void;
+  onPickFiles: () => void;
 }) {
-  function handleDrop(event: DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    const files = Array.from(event.dataTransfer.files);
-    if (files.length) {
-      onFiles(files);
-    }
-  }
-
   return (
     <div
-      onDrop={handleDrop}
-      onDragOver={(event) => {
-        event.preventDefault();
-      }}
       className="rounded-lg border border-dashed border-app-border bg-white/5 px-3 py-3 text-xs text-app-muted"
     >
-      Drag and drop files to upload
+      <div className="flex items-center justify-between gap-3">
+        <span>Drag and drop files from Windows Explorer into this window</span>
+        <button type="button" className="rounded border border-app-border px-2 py-1 text-[11px] text-app-text" onClick={onPickFiles}>
+          Select Files
+        </button>
+      </div>
     </div>
   );
 }

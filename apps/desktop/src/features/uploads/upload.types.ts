@@ -23,12 +23,18 @@ export interface UploadTask {
   completedAt?: Date;
 }
 
+export interface UploadLocalEntry {
+  path: string;
+  fileName: string;
+  sizeBytes: number;
+}
+
 export interface UploadStoreState {
   tasks: UploadTask[];
   isQueueVisible: boolean;
   isPaused: boolean;
   concurrency: number;
-  addFiles: (files: File[], targetPath: string) => void;
+  addPathEntries: (entries: UploadLocalEntry[], targetPath: string, connectionId: string, bucketName: string) => Promise<void>;
   startTask: (taskId: string) => Promise<void>;
   pauseTask: (taskId: string) => void;
   cancelTask: (taskId: string) => void;

@@ -2,9 +2,8 @@ import { UploadDropzone } from "./UploadDropzone";
 import { UploadRow } from "./UploadRow";
 import { useUploadStore } from "./upload.store";
 
-export function UploadQueue() {
+export function UploadQueue({ onPickFiles }: { onPickFiles: () => void }) {
   const tasks = useUploadStore((state) => state.tasks);
-  const addFiles = useUploadStore((state) => state.addFiles);
   const pauseTask = useUploadStore((state) => state.pauseTask);
   const cancelTask = useUploadStore((state) => state.cancelTask);
   const retryTask = useUploadStore((state) => state.retryTask);
@@ -19,7 +18,7 @@ export function UploadQueue() {
         </button>
       </div>
 
-      <UploadDropzone onFiles={(files) => addFiles(files, "/")} />
+      <UploadDropzone onPickFiles={onPickFiles} />
 
       <div className="mt-3 space-y-2">
         {tasks.length === 0 ? <p className="text-xs text-app-soft">No uploads yet.</p> : null}

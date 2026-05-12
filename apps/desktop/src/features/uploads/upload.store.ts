@@ -8,15 +8,15 @@ export const useUploadStore = create<UploadStoreState>((set, get) => ({
   isQueueVisible: true,
   isPaused: false,
   concurrency: 3,
-  addFiles(files, targetPath) {
-    const tasks = files.map((file) => ({
-      id: `${Date.now()}-${file.name}`,
-      connectionId: "",
-      bucketName: "",
-      sourcePath: file.name,
-      objectKey: `${targetPath.replace(/\/$/, "")}/${file.name}`.replace(/^\//, ""),
-      fileName: file.name,
-      sizeBytes: file.size,
+  async addPathEntries(entries, targetPath, connectionId, bucketName) {
+    const tasks = entries.map((entry) => ({
+      id: `${Date.now()}-${entry.fileName}`,
+      connectionId,
+      bucketName,
+      sourcePath: entry.path,
+      objectKey: `${targetPath.replace(/\/$/, "")}/${entry.fileName}`.replace(/^\//, ""),
+      fileName: entry.fileName,
+      sizeBytes: entry.sizeBytes,
       uploadedBytes: 0,
       progress: 0,
       speedBytesPerSecond: 0,
@@ -24,6 +24,12 @@ export const useUploadStore = create<UploadStoreState>((set, get) => ({
     }));
 
     set({ tasks: [...get().tasks, ...tasks] });
+
+    await uploadService.enqueueUploads(connectionId, bucketName, targetPath, entries);
+
+    for (const task of tasks) {
+      await get().startTask(task.id);
+    }
   },
   async startTask(taskId) {
     const task = get().tasks.find((item) => item.id === taskId);
@@ -34,8 +40,6 @@ export const useUploadStore = create<UploadStoreState>((set, get) => ({
     set({
       tasks: get().tasks.map((item) => (item.id === taskId ? { ...item, status: "uploading", startedAt: new Date() } : item))
     });
-
-    await uploadService.enqueueUploads(task.connectionId, task.bucketName, "/", []);
 
     set({
       tasks: get().tasks.map((item) => (item.id === taskId ? updateUploadProgress(item, item.sizeBytes, item.sizeBytes) : item))

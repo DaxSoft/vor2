@@ -8,8 +8,12 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev --parallel",
+    "dev": "yarn workspace @r2-explorer/desktop tauri:dev",
+    "desktop:run": "yarn workspace @r2-explorer/desktop tauri:dev",
+    "dev:web": "yarn workspace @r2-explorer/desktop web:dev",
     "build": "turbo run build",
+    "desktop:build": "yarn workspace @r2-explorer/desktop tauri:build",
+    "desktop:test": "yarn workspace @r2-explorer/desktop test:desktop",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "prisma:generate": "yarn workspace @r2-explorer/desktop prisma:generate",

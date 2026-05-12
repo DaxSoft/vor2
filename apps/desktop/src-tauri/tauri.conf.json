@@ -6,7 +6,7 @@
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
-    "beforeDevCommand": "yarn workspace @r2-explorer/desktop dev",
+    "beforeDevCommand": "yarn workspace @r2-explorer/desktop web:dev",
     "beforeBuildCommand": "yarn workspace @r2-explorer/desktop build"
   },
   "app": {

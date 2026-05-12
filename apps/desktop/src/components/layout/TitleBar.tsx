@@ -5,13 +5,19 @@ export function TitleBar({
   onSearch,
   onNewFolder,
   onUpload,
-  onRefresh
+  onRefresh,
+  onMinimize,
+  onToggleMaximize,
+  onClose
 }: {
   search: string;
   onSearch: (value: string) => void;
   onNewFolder: () => void;
   onUpload: () => void;
   onRefresh: () => void;
+  onMinimize: () => void;
+  onToggleMaximize: () => void;
+  onClose: () => void;
 }) {
   return (
     <header data-tauri-drag-region className="flex items-center gap-3 border-b border-app-border px-4 py-3">
@@ -49,13 +55,13 @@ export function TitleBar({
       </div>
 
       <div className="ml-2 flex items-center gap-1">
-        <button type="button" aria-label="Minimize" className="rounded border border-app-border p-1 text-app-muted hover:text-app-text">
+        <button type="button" aria-label="Minimize" className="rounded border border-app-border p-1 text-app-muted hover:text-app-text" onClick={onMinimize}>
           <Minus className="h-3.5 w-3.5" />
         </button>
-        <button type="button" aria-label="Maximize" className="rounded border border-app-border p-1 text-app-muted hover:text-app-text">
+        <button type="button" aria-label="Maximize" className="rounded border border-app-border p-1 text-app-muted hover:text-app-text" onClick={onToggleMaximize}>
           <Square className="h-3.5 w-3.5" />
         </button>
-        <button type="button" aria-label="Close" className="rounded border border-app-border p-1 text-rose-300 hover:text-rose-200">
+        <button type="button" aria-label="Close" className="rounded border border-app-border p-1 text-rose-300 hover:text-rose-200" onClick={onClose}>
           <X className="h-3.5 w-3.5" />
         </button>
       </div>

@@ -88,6 +88,7 @@ pub fn run() {
             commands::window::hide_main_window,
             commands::window::set_startup_enabled,
             commands::file_dialog::open_file_dialog,
+            commands::file_dialog::inspect_file_paths,
             commands::file_dialog::reveal_in_explorer,
             commands::database::list_connections,
             commands::database::create_connection,
