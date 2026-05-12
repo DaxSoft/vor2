@@ -113,6 +113,15 @@ fn normalize_endpoint(endpoint: &str) -> Result<String, String> {
     }
 }
 
+fn map_decrypt_error(err: String) -> String {
+    if err == "decryption failure" {
+        return String::from(
+            "Saved credentials for this connection could not be decrypted. Recreate this connection to store fresh credentials.",
+        );
+    }
+    err
+}
+
 async fn make_client(endpoint: &str, region: &str, access_key_id: &str, secret_access_key: &str) -> Result<Client, String> {
     let creds = Credentials::new(
         access_key_id.to_string(),
@@ -372,7 +381,8 @@ pub async fn browse_folder(
         &encrypted_access_key_id,
         access_iv,
         access_tag,
-    )?;
+    )
+    .map_err(map_decrypt_error)?;
 
     let secret_access_key = encryption::decrypt_secret(
         &master_key,
@@ -381,7 +391,8 @@ pub async fn browse_folder(
         &encrypted_secret_access_key,
         secret_iv,
         secret_tag,
-    )?;
+    )
+    .map_err(map_decrypt_error)?;
 
     let client = make_client(&endpoint, &region, &access_key_id, &secret_access_key).await?;
 
@@ -520,7 +531,8 @@ pub async fn create_folder(
         &encrypted_access_key_id,
         access_iv,
         access_tag,
-    )?;
+    )
+    .map_err(map_decrypt_error)?;
 
     let secret_access_key = encryption::decrypt_secret(
         &master_key,
@@ -529,7 +541,8 @@ pub async fn create_folder(
         &encrypted_secret_access_key,
         secret_iv,
         secret_tag,
-    )?;
+    )
+    .map_err(map_decrypt_error)?;
 
     let client = make_client(&endpoint, &region, &access_key_id, &secret_access_key).await?;
     let path_prefix = normalize_prefix(&path);

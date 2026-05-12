@@ -19,3 +19,18 @@ pub fn get_or_create_master_key(user_id: &str) -> Result<Vec<u8>, String> {
     entry.set_password(&encoded).map_err(|err| err.to_string())?;
     Ok(bytes)
 }
+
+pub fn delete_master_key(user_id: &str) -> Result<(), String> {
+    let key_name = format!("master-key:{user_id}");
+    let entry = Entry::new(SERVICE_NAME, &key_name).map_err(|err| err.to_string())?;
+    match entry.delete_credential() {
+        Ok(()) => Ok(()),
+        Err(err) => {
+            let message = err.to_string();
+            if message.to_lowercase().contains("no entry") || message.to_lowercase().contains("not found") {
+                return Ok(());
+            }
+            Err(message)
+        }
+    }
+}

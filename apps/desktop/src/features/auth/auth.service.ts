@@ -14,5 +14,8 @@ export const authService = {
   },
   async signOut() {
     return client.signOut();
+  },
+  async deleteAccount() {
+    return client.deleteAccount();
   }
 };

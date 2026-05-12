@@ -1,5 +1,6 @@
-import { Cloud } from "lucide-react";
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
+import logoMark from "@/assets/logo-mark.svg";
 import { useAuthStore } from "./auth.store";
 
 export function AuthScreen() {
@@ -9,13 +10,14 @@ export function AuthScreen() {
   const signUpWithPassword = useAuthStore((state) => state.signUpWithPassword);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className="flex h-screen w-screen items-center justify-center app-background px-6">
       <div className="glass-shell w-full max-w-lg rounded-app p-8">
         <div className="mb-8 flex items-center gap-3">
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent">
-            <Cloud className="h-5 w-5" />
+            <img src={logoMark} alt="R2 Explorer" className="h-5 w-5" />
           </span>
           <div>
             <h1 className="text-sm font-semibold text-app-text">R2 Explorer</h1>
@@ -36,14 +38,24 @@ export function AuthScreen() {
           </label>
           <label className="block text-xs text-app-muted">
             Password
-            <input
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              type="password"
-              className="blue-focus mt-1 block w-full rounded-lg border border-app-border bg-white/5 px-3 py-2 text-sm text-app-text"
-              placeholder="password"
-              autoComplete="current-password"
-            />
+            <div className="relative mt-1">
+              <input
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                type={showPassword ? "text" : "password"}
+                className="blue-focus block w-full rounded-lg border border-app-border bg-white/5 px-3 py-2 pr-10 text-sm text-app-text"
+                placeholder="password"
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-white hover:text-white/85"
+                onClick={() => setShowPassword((prev) => !prev)}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </label>
         </div>
 

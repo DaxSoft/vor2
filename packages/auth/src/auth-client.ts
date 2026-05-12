@@ -11,6 +11,7 @@ export interface AuthClient {
   signInWithPassword: (credentials: AuthCredentials) => Promise<AuthSession>;
   signUpWithPassword: (credentials: AuthCredentials) => Promise<AuthSession>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 interface NativeAuthSessionResponse {
@@ -56,6 +57,10 @@ export function createAuthClient(): AuthClient {
 
     async signOut() {
       await invoke("clear_session");
+    },
+
+    async deleteAccount() {
+      await invoke("delete_account");
     }
   };
 }

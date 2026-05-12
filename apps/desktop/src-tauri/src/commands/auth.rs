@@ -4,6 +4,7 @@ use serde::Serialize;
 use sha2::{Digest, Sha256};
 use tauri::State;
 
+use crate::security::keyring::delete_master_key;
 use crate::state::app_state::{with_connection, AppState};
 
 #[derive(Debug, Serialize, Clone)]
@@ -186,5 +187,40 @@ pub async fn clear_session(state: State<'_, AppState>) -> Result<(), String> {
         .lock()
         .map_err(|_| String::from("failed to write auth state"))?;
     *user = None;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn delete_account(state: State<'_, AppState>) -> Result<(), String> {
+    let user_id = state
+        .user_id
+        .lock()
+        .map_err(|_| String::from("failed to read auth state"))?
+        .clone()
+        .ok_or_else(|| String::from("user session required"))?;
+
+    with_connection(state.db_path.as_ref(), |connection| {
+        let tx = connection.unchecked_transaction().map_err(|err| err.to_string())?;
+
+        tx.execute("DELETE FROM upload_history WHERE user_id = ?1", params![user_id.clone()])
+            .map_err(|err| err.to_string())?;
+        tx.execute("DELETE FROM r2_connections WHERE user_id = ?1", params![user_id.clone()])
+            .map_err(|err| err.to_string())?;
+        tx.execute("DELETE FROM app_settings WHERE user_id = ?1", params![user_id.clone()])
+            .map_err(|err| err.to_string())?;
+        tx.execute("DELETE FROM auth_users WHERE id = ?1", params![user_id.clone()])
+            .map_err(|err| err.to_string())?;
+
+        tx.commit().map_err(|err| err.to_string())
+    })?;
+
+    delete_master_key(&user_id)?;
+
+    let mut session = state
+        .user_id
+        .lock()
+        .map_err(|_| String::from("failed to write auth state"))?;
+    *session = None;
+
     Ok(())
 }

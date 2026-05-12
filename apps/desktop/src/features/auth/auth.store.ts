@@ -38,6 +38,15 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
     await authService.signOut();
     set({ session: null, isLocked: true });
   },
+  async deleteAccount() {
+    set({ isLoading: true, error: null });
+    try {
+      await authService.deleteAccount();
+      set({ session: null, isLocked: true, isLoading: false });
+    } catch {
+      set({ isLoading: false, error: "Could not delete account." });
+    }
+  },
   lock() {
     set({ isLocked: true, session: null });
   },

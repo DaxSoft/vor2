@@ -1,4 +1,5 @@
-import { Cloud, FolderPlus, Minus, MoreHorizontal, RefreshCw, Search, Square, UploadCloud, X } from "lucide-react";
+import { FolderPlus, Minus, MoreHorizontal, RefreshCw, Search, Square, UploadCloud, X } from "lucide-react";
+import logoMark from "@/assets/logo-mark.svg";
 
 export function TitleBar({
   search,
@@ -9,7 +10,8 @@ export function TitleBar({
   onOpenSettings,
   onMinimize,
   onToggleMaximize,
-  onClose
+  onClose,
+  onStartDragging
 }: {
   search: string;
   onSearch: (value: string) => void;
@@ -20,18 +22,31 @@ export function TitleBar({
   onMinimize: () => void;
   onToggleMaximize: () => void;
   onClose: () => void;
+  onStartDragging: () => void;
 }) {
   return (
-    <header data-tauri-drag-region className="flex items-center gap-3 border-b border-app-border px-4 py-3">
-      <div className="flex items-center gap-2">
-        <Cloud className="h-4 w-4 text-accent" />
+    <header
+      className="flex items-center gap-3 border-b border-app-border px-4 py-3"
+      onMouseDown={(event) => {
+        if (event.button !== 0) {
+          return;
+        }
+        const target = event.target as HTMLElement;
+        if (target.closest("[data-no-drag='true']")) {
+          return;
+        }
+        onStartDragging();
+      }}
+    >
+      <div className="flex items-center gap-2" data-no-drag="true">
+        <img src={logoMark} alt="R2 Explorer" className="h-4 w-4" />
         <span className="text-sm font-semibold text-app-text">R2 Explorer</span>
       </div>
 
-      <label data-tauri-drag-region="false" className="relative ml-2 flex-1">
+      <label data-no-drag="true" className="relative ml-2 flex-1">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
         <input
-          data-tauri-drag-region="false"
+          data-no-drag="true"
           aria-label="Search"
           value={search}
           onChange={(event) => onSearch(event.target.value)}
@@ -40,31 +55,31 @@ export function TitleBar({
         />
       </label>
 
-      <div className="flex items-center gap-2">
-        <button data-tauri-drag-region="false" type="button" aria-label="New folder" className="rounded-lg border border-app-border bg-white/5 px-2 py-1.5 text-xs" onClick={onNewFolder}>
+      <div className="flex items-center gap-2" data-no-drag="true">
+        <button data-no-drag="true" type="button" aria-label="New folder" className="rounded-lg border border-app-border bg-white/5 px-2 py-1.5 text-xs" onClick={onNewFolder}>
           <FolderPlus className="mr-1 inline h-3.5 w-3.5" />
           New Folder
         </button>
-        <button data-tauri-drag-region="false" type="button" aria-label="Upload" className="rounded-lg border border-app-border bg-white/5 px-2 py-1.5 text-xs" onClick={onUpload}>
+        <button data-no-drag="true" type="button" aria-label="Upload" className="rounded-lg border border-app-border bg-white/5 px-2 py-1.5 text-xs" onClick={onUpload}>
           <UploadCloud className="mr-1 inline h-3.5 w-3.5" />
           Upload
         </button>
-        <button data-tauri-drag-region="false" type="button" aria-label="Refresh" className="rounded-lg border border-app-border bg-white/5 px-2 py-1.5 text-xs" onClick={onRefresh}>
+        <button data-no-drag="true" type="button" aria-label="Refresh" className="rounded-lg border border-app-border bg-white/5 px-2 py-1.5 text-xs" onClick={onRefresh}>
           <RefreshCw className="h-3.5 w-3.5" />
         </button>
-        <button data-tauri-drag-region="false" type="button" aria-label="More" className="rounded-lg border border-app-border bg-white/5 px-2 py-1.5 text-xs" onClick={onOpenSettings}>
+        <button data-no-drag="true" type="button" aria-label="More" className="rounded-lg border border-app-border bg-white/5 px-2 py-1.5 text-xs" onClick={onOpenSettings}>
           <MoreHorizontal className="h-3.5 w-3.5" />
         </button>
       </div>
 
-      <div className="ml-2 flex items-center gap-1">
-        <button data-tauri-drag-region="false" type="button" aria-label="Minimize" className="rounded border border-app-border p-1 text-app-muted hover:text-app-text" onClick={onMinimize}>
+      <div className="ml-2 flex items-center gap-1" data-no-drag="true">
+        <button data-no-drag="true" type="button" aria-label="Minimize" className="rounded border border-app-border p-1 text-app-muted hover:text-app-text" onClick={onMinimize}>
           <Minus className="h-3.5 w-3.5" />
         </button>
-        <button data-tauri-drag-region="false" type="button" aria-label="Maximize" className="rounded border border-app-border p-1 text-app-muted hover:text-app-text" onClick={onToggleMaximize}>
+        <button data-no-drag="true" type="button" aria-label="Maximize" className="rounded border border-app-border p-1 text-app-muted hover:text-app-text" onClick={onToggleMaximize}>
           <Square className="h-3.5 w-3.5" />
         </button>
-        <button data-tauri-drag-region="false" type="button" aria-label="Close" className="rounded border border-app-border p-1 text-rose-300 hover:text-rose-200" onClick={onClose}>
+        <button data-no-drag="true" type="button" aria-label="Close" className="rounded border border-app-border p-1 text-rose-300 hover:text-rose-200" onClick={onClose}>
           <X className="h-3.5 w-3.5" />
         </button>
       </div>

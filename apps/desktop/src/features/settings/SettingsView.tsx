@@ -11,6 +11,10 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
   const isLoading = useUiStore((state) => state.isLoading);
   const error = useUiStore((state) => state.error);
   const signOut = useAuthStore((state) => state.signOut);
+  const deleteAccount = useAuthStore((state) => state.deleteAccount);
+  const authSession = useAuthStore((state) => state.session);
+  const authError = useAuthStore((state) => state.error);
+  const authLoading = useAuthStore((state) => state.isLoading);
 
   useEffect(() => {
     void hydrate();
@@ -62,6 +66,7 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
 
       {isLoading ? <p className="mt-3 text-[11px] text-app-soft">Saving...</p> : null}
       {error ? <p className="mt-3 text-[11px] text-rose-300">{error}</p> : null}
+      {authError ? <p className="mt-3 text-[11px] text-rose-300">{authError}</p> : null}
 
       <button
         type="button"
@@ -71,6 +76,26 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
         }}
       >
         Sign out
+      </button>
+
+      <button
+        type="button"
+        disabled={authLoading}
+        className="mt-2 w-full rounded border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200 hover:border-rose-300 disabled:opacity-60"
+        onClick={() => {
+          const username = authSession?.user.username ?? "this account";
+          const ok = window.confirm(
+            `Delete ${username}? This will permanently remove your user account, all saved R2 connections, and upload history on this device.`
+          );
+          if (!ok) {
+            return;
+          }
+          void deleteAccount().then(() => {
+            onClose();
+          });
+        }}
+      >
+        Delete account
       </button>
     </div>
   );

@@ -11,7 +11,7 @@ import { useConnectionStore } from "@/features/connections/connection.store";
 import { useUploadStore } from "@/features/uploads/upload.store";
 import { SettingsView } from "@/features/settings/SettingsView";
 import { bindTrayEvents } from "@/features/tray/tray.events";
-import { closeToTray, minimizeWindow, toggleMaximizeWindow } from "@/lib/desktop-window";
+import { closeToTray, minimizeWindow, startDraggingWindow, toggleMaximizeWindow } from "@/lib/desktop-window";
 
 interface FileDialogEntry {
   path: string;
@@ -142,6 +142,9 @@ export function AppShell() {
           }}
           onClose={() => {
             void closeToTray();
+          }}
+          onStartDragging={() => {
+            void startDraggingWindow();
           }}
         />
 

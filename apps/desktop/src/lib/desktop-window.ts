@@ -1,3 +1,4 @@
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 
 export function isDesktopRuntime(): boolean {
@@ -29,4 +30,11 @@ export async function closeToTray(): Promise<void> {
     return;
   }
   await invoke("hide_main_window");
+}
+
+export async function startDraggingWindow(): Promise<void> {
+  if (!isDesktopRuntime()) {
+    return;
+  }
+  await getCurrentWindow().startDragging();
 }

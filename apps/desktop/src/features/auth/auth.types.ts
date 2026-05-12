@@ -9,6 +9,7 @@ export interface AuthStoreState {
   signInWithPassword: (username: string, password: string) => Promise<void>;
   signUpWithPassword: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   lock: () => void;
   unlock: () => void;
 }

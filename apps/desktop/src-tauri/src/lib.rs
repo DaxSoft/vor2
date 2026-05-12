@@ -105,6 +105,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::auth::get_session,
             commands::auth::clear_session,
+            commands::auth::delete_account,
             commands::auth::sign_in_with_password,
             commands::auth::sign_up_with_password,
             commands::crypto::encrypt_secret,

@@ -24,6 +24,15 @@ pub struct DecryptedConnectionDto {
     pub secret_access_key: String,
 }
 
+fn map_decrypt_error(err: String) -> String {
+    if err == "decryption failure" {
+        return String::from(
+            "Saved credentials for this connection could not be decrypted. Recreate this connection to store fresh credentials.",
+        );
+    }
+    err
+}
+
 #[tauri::command]
 pub async fn encrypt_secret(
     _state: State<'_, AppState>,
@@ -54,11 +63,23 @@ pub async fn decrypt_connection(
         .clone()
         .ok_or_else(|| String::from("user session required"))?;
 
-    let (encrypted_access_key_id, encrypted_secret_access_key, encryption_iv, encryption_tag) =
+    let (
+        encrypted_access_key_id,
+        encrypted_secret_access_key,
+        encrypted_access_key_iv,
+        encrypted_access_key_tag,
+        encrypted_secret_access_key_iv,
+        encrypted_secret_access_key_tag,
+        encryption_iv,
+        encryption_tag,
+    ) =
         with_connection(state.db_path.as_ref(), |connection| {
             let mut stmt = connection
                 .prepare(
-                    "SELECT encrypted_access_key_id, encrypted_secret_access_key, encryption_iv, encryption_tag
+                    "SELECT encrypted_access_key_id, encrypted_secret_access_key,
+                            encrypted_access_key_iv, encrypted_access_key_tag,
+                            encrypted_secret_access_key_iv, encrypted_secret_access_key_tag,
+                            encryption_iv, encryption_tag
                      FROM r2_connections WHERE id = ?1 AND user_id = ?2",
                 )
                 .map_err(|err| err.to_string())?;
@@ -69,10 +90,35 @@ pub async fn decrypt_connection(
                     row.get::<_, String>(1)?,
                     row.get::<_, String>(2)?,
                     row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
+                    row.get::<_, String>(5)?,
+                    row.get::<_, String>(6)?,
+                    row.get::<_, String>(7)?,
                 ))
             })
             .map_err(|err| err.to_string())
         })?;
+
+    let access_iv = if encrypted_access_key_iv.is_empty() {
+        encryption_iv.as_str()
+    } else {
+        encrypted_access_key_iv.as_str()
+    };
+    let access_tag = if encrypted_access_key_tag.is_empty() {
+        encryption_tag.as_str()
+    } else {
+        encrypted_access_key_tag.as_str()
+    };
+    let secret_iv = if encrypted_secret_access_key_iv.is_empty() {
+        encryption_iv.as_str()
+    } else {
+        encrypted_secret_access_key_iv.as_str()
+    };
+    let secret_tag = if encrypted_secret_access_key_tag.is_empty() {
+        encryption_tag.as_str()
+    } else {
+        encrypted_secret_access_key_tag.as_str()
+    };
 
     let master_key = get_or_create_master_key(&user_id)?;
     let access_key_id = encryption::decrypt_secret(
@@ -80,18 +126,20 @@ pub async fn decrypt_connection(
         &user_id,
         &connection_id,
         &encrypted_access_key_id,
-        &encryption_iv,
-        &encryption_tag,
-    )?;
+        access_iv,
+        access_tag,
+    )
+    .map_err(map_decrypt_error)?;
 
     let secret_access_key = encryption::decrypt_secret(
         &master_key,
         &user_id,
         &connection_id,
         &encrypted_secret_access_key,
-        &encryption_iv,
-        &encryption_tag,
-    )?;
+        secret_iv,
+        secret_tag,
+    )
+    .map_err(map_decrypt_error)?;
 
     Ok(DecryptedConnectionDto {
         connection_id,
