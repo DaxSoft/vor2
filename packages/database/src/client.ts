@@ -2,8 +2,8 @@ import "dotenv/config";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import { PrismaClient } from "../generated/prisma/client";
+import { PrismaBetterSQLite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaClient } from "@prisma/client";
 
 function getOsDataDir(): string {
   const home = os.homedir();
@@ -31,7 +31,7 @@ function resolveDatabaseUrl(): string {
 }
 
 const connectionString = resolveDatabaseUrl();
-const adapter = new PrismaBetterSqlite3({ url: connectionString });
+const adapter = new PrismaBetterSQLite3({ url: connectionString });
 const prisma = new PrismaClient({ adapter });
 
 export { prisma };

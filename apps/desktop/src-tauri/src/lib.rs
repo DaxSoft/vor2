@@ -1,57 +1,16 @@
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 
 mod commands;
-mod security {
-    pub mod encryption;
-    pub mod keyring;
-}
 mod state {
     pub mod app_state;
 }
 
-use rusqlite::params;
 use tauri::{Emitter, Manager};
 use tauri::WindowEvent;
 use window_vibrancy::{apply_acrylic, apply_mica};
 
 use crate::commands::tray::setup_tray;
-use crate::state::app_state::{with_connection, AppState};
-
-fn should_start_minimized(state: &AppState) -> bool {
-    let user_id = match state.user_id.lock() {
-        Ok(value) => value.clone().unwrap_or_else(|| String::from("local-user")),
-        Err(_) => String::from("local-user"),
-    };
-
-    with_connection(state.db_path.as_ref(), |connection| {
-        let mut stmt = connection
-            .prepare("SELECT start_minimized_to_tray FROM app_settings WHERE user_id = ?1")
-            .map_err(|err| err.to_string())?;
-        let value = stmt
-            .query_row(params![user_id], |row| row.get::<_, i64>(0))
-            .ok();
-        Ok(value.unwrap_or(1) == 1)
-    })
-    .unwrap_or(true)
-}
-
-fn should_close_to_tray(state: &AppState) -> bool {
-    let user_id = match state.user_id.lock() {
-        Ok(value) => value.clone().unwrap_or_else(|| String::from("local-user")),
-        Err(_) => String::from("local-user"),
-    };
-
-    with_connection(state.db_path.as_ref(), |connection| {
-        let mut stmt = connection
-            .prepare("SELECT close_to_tray FROM app_settings WHERE user_id = ?1")
-            .map_err(|err| err.to_string())?;
-        let value = stmt
-            .query_row(params![user_id], |row| row.get::<_, i64>(0))
-            .ok();
-        Ok(value.unwrap_or(1) == 1)
-    })
-    .unwrap_or(true)
-}
+use crate::state::app_state::AppState;
 
 fn apply_window_effects(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
@@ -70,11 +29,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
-            let data_dir = app
-                .path()
-                .app_data_dir()
-                .map_err(|err| err.to_string())?;
-            let state = AppState::new(data_dir)?;
+            let state = AppState::new();
             app.manage(state.clone());
 
             setup_tray(app.handle())?;
@@ -83,18 +38,14 @@ pub fn run() {
             let window = app
                 .get_webview_window("main")
                 .ok_or_else(|| String::from("main window not found"))?;
-            if should_start_minimized(&state) {
-                let _ = window.hide();
-            } else {
-                let _ = window.show();
-            }
+            let _ = window.show();
 
             Ok(())
         })
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 if let Some(state) = window.try_state::<AppState>() {
-                    if should_close_to_tray(state.inner()) {
+                    if state.inner().user_id.lock().is_ok() {
                         api.prevent_close();
                         let _ = window.hide();
                         let _ = window.emit("toast", "R2 Explorer is still running in the tray.");
@@ -103,13 +54,11 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            commands::auth::get_session,
-            commands::auth::clear_session,
-            commands::auth::delete_account,
-            commands::auth::sign_in_with_password,
-            commands::auth::sign_up_with_password,
-            commands::crypto::encrypt_secret,
-            commands::crypto::decrypt_connection,
+            commands::backend::get_session,
+            commands::backend::clear_session,
+            commands::backend::delete_account,
+            commands::backend::sign_in_with_password,
+            commands::backend::sign_up_with_password,
             commands::window::show_main_window,
             commands::window::hide_main_window,
             commands::window::minimize_main_window,
@@ -120,12 +69,12 @@ pub fn run() {
             commands::file_dialog::open_file_dialog,
             commands::file_dialog::inspect_file_paths,
             commands::file_dialog::reveal_in_explorer,
-            commands::database::list_connections,
-            commands::database::create_connection,
-            commands::database::set_active_connection,
-            commands::database::browse_folder,
-            commands::database::create_folder,
-            commands::database::enqueue_uploads
+            commands::backend::list_connections,
+            commands::backend::create_connection,
+            commands::backend::set_active_connection,
+            commands::backend::browse_folder,
+            commands::backend::create_folder,
+            commands::backend::enqueue_uploads
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

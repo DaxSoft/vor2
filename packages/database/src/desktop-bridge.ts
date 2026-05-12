@@ -1,0 +1,458 @@
+import "dotenv/config";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import crypto from "node:crypto";
+import { S3Client, ListObjectsV2Command, PutObjectCommand } from "@aws-sdk/client-s3";
+import { prisma } from "./client";
+
+type Json = Record<string, unknown>;
+
+function getOsDataDir(): string {
+  const home = os.homedir();
+  if (process.platform === "win32") return process.env.LOCALAPPDATA ?? path.join(home, "AppData", "Local");
+  if (process.platform === "darwin") return path.join(home, "Library", "Application Support");
+  return process.env.XDG_DATA_HOME ?? path.join(home, ".local", "share");
+}
+
+const appDir = path.join(getOsDataDir(), "vor2");
+const sessionPath = path.join(appDir, "session.json");
+const masterKeysPath = path.join(appDir, "master-keys.json");
+fs.mkdirSync(appDir, { recursive: true });
+
+function out(value: unknown): never {
+  process.stdout.write(`${JSON.stringify({ ok: true, data: value })}\n`);
+  process.exit(0);
+}
+
+function fail(message: string): never {
+  process.stdout.write(`${JSON.stringify({ ok: false, error: message })}\n`);
+  process.exit(1);
+}
+
+function normalizeUsername(username: string): string {
+  return username.trim().toLowerCase();
+}
+
+function nowPlusDaysIso(days: number): string {
+  const date = new Date(Date.now() + days * 86400000);
+  return date.toISOString();
+}
+
+function hashPassword(password: string, saltHex: string): string {
+  return crypto.createHash("sha256").update(Buffer.from(saltHex, "hex")).update(password).digest("hex");
+}
+
+function readSession(): { userId: string } | null {
+  if (!fs.existsSync(sessionPath)) return null;
+  return JSON.parse(fs.readFileSync(sessionPath, "utf8")) as { userId: string };
+}
+
+function writeSession(userId: string): void {
+  fs.writeFileSync(sessionPath, JSON.stringify({ userId }), "utf8");
+}
+
+function clearSessionFile(): void {
+  if (fs.existsSync(sessionPath)) fs.unlinkSync(sessionPath);
+}
+
+function readMasterKeys(): Record<string, string> {
+  if (!fs.existsSync(masterKeysPath)) return {};
+  return JSON.parse(fs.readFileSync(masterKeysPath, "utf8")) as Record<string, string>;
+}
+
+function getOrCreateMasterKey(userId: string): Buffer {
+  const keys = readMasterKeys();
+  if (keys[userId]) return Buffer.from(keys[userId], "base64");
+  const generated = crypto.randomBytes(32);
+  keys[userId] = generated.toString("base64");
+  fs.writeFileSync(masterKeysPath, JSON.stringify(keys), "utf8");
+  return generated;
+}
+
+function deleteMasterKey(userId: string): void {
+  const keys = readMasterKeys();
+  delete keys[userId];
+  fs.writeFileSync(masterKeysPath, JSON.stringify(keys), "utf8");
+}
+
+function deriveKey(masterKey: Buffer, userId: string, connectionId: string): Buffer {
+  return crypto.hkdfSync("sha256", masterKey, Buffer.alloc(0), Buffer.from(`${userId}:${connectionId}`), 32);
+}
+
+function encryptSecret(masterKey: Buffer, userId: string, connectionId: string, value: string): { ciphertext: string; iv: string; tag: string } {
+  const key = deriveKey(masterKey, userId, connectionId);
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+  const ciphertext = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return { ciphertext: ciphertext.toString("base64"), iv: iv.toString("base64"), tag: tag.toString("base64") };
+}
+
+function decryptSecret(masterKey: Buffer, userId: string, connectionId: string, ciphertext: string, iv: string, tag: string): string {
+  const key = deriveKey(masterKey, userId, connectionId);
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, Buffer.from(iv, "base64"));
+  decipher.setAuthTag(Buffer.from(tag, "base64"));
+  const plaintext = Buffer.concat([decipher.update(Buffer.from(ciphertext, "base64")), decipher.final()]);
+  return plaintext.toString("utf8");
+}
+
+function makeClient(endpoint: string, region: string, accessKeyId: string, secretAccessKey: string): S3Client {
+  return new S3Client({
+    endpoint,
+    region,
+    forcePathStyle: true,
+    credentials: { accessKeyId, secretAccessKey }
+  });
+}
+
+async function currentUserId(): Promise<string> {
+  const session = readSession();
+  if (!session?.userId) throw new Error("user session required");
+  return session.userId;
+}
+
+async function ensureTables(): Promise<void> {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS auth_users (
+      id TEXT PRIMARY KEY,
+      username TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      password_salt TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS r2_connections (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      account_id TEXT,
+      bucket_name TEXT NOT NULL,
+      endpoint TEXT NOT NULL,
+      public_url TEXT,
+      region TEXT NOT NULL DEFAULT 'auto',
+      encrypted_access_key_id TEXT NOT NULL,
+      encrypted_secret_access_key TEXT NOT NULL,
+      encrypted_access_key_iv TEXT NOT NULL DEFAULT '',
+      encrypted_access_key_tag TEXT NOT NULL DEFAULT '',
+      encrypted_secret_access_key_iv TEXT NOT NULL DEFAULT '',
+      encrypted_secret_access_key_tag TEXT NOT NULL DEFAULT '',
+      encryption_iv TEXT NOT NULL,
+      encryption_tag TEXT NOT NULL,
+      encryption_version INTEGER NOT NULL DEFAULT 1,
+      status TEXT NOT NULL DEFAULT 'ACTIVE',
+      last_connected_at TEXT,
+      last_selected_path TEXT NOT NULL DEFAULT '/',
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      user_id TEXT PRIMARY KEY,
+      active_connection_id TEXT,
+      start_minimized_to_tray INTEGER NOT NULL DEFAULT 1,
+      close_to_tray INTEGER NOT NULL DEFAULT 1,
+      launch_at_startup INTEGER NOT NULL DEFAULT 0,
+      theme TEXT NOT NULL DEFAULT 'dark',
+      accent_color TEXT NOT NULL DEFAULT '#2488ff',
+      sidebar_width INTEGER NOT NULL DEFAULT 284,
+      details_panel_visible INTEGER NOT NULL DEFAULT 1,
+      upload_panel_visible INTEGER NOT NULL DEFAULT 1,
+      window_width INTEGER,
+      window_height INTEGER,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS upload_history (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      connection_id TEXT NOT NULL,
+      bucket_name TEXT NOT NULL,
+      source_path TEXT NOT NULL,
+      object_key TEXT NOT NULL,
+      file_name TEXT NOT NULL,
+      mime_type TEXT,
+      size_bytes INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      progress INTEGER NOT NULL DEFAULT 0,
+      error_message TEXT,
+      public_url TEXT,
+      started_at TEXT,
+      completed_at TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
+async function run(action: string, payload: Json): Promise<unknown> {
+  await ensureTables();
+  switch (action) {
+    case "sign_up_with_password": {
+      const username = normalizeUsername(String(payload.username ?? ""));
+      const password = String(payload.password ?? "");
+      if (!username) throw new Error("Username is required.");
+      if (password.trim().length < 6) throw new Error("Password must have at least 6 characters.");
+      const existing = await prisma.$queryRawUnsafe<Array<{ c: number }>>(
+        "SELECT COUNT(1) AS c FROM auth_users WHERE username = ?",
+        username
+      );
+      if ((existing[0]?.c ?? 0) > 0) throw new Error("Username already exists.");
+      const userId = `user-${Date.now()}`;
+      const saltHex = crypto.randomBytes(16).toString("hex");
+      const passwordHash = hashPassword(password, saltHex);
+      await prisma.$executeRawUnsafe(
+        "INSERT INTO auth_users (id, username, password_hash, password_salt) VALUES (?, ?, ?, ?)",
+        userId,
+        username,
+        passwordHash,
+        saltHex
+      );
+      await prisma.$executeRawUnsafe(
+        "INSERT OR IGNORE INTO \"User\" (id, name, createdAt, updatedAt) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+        userId,
+        username
+      );
+      writeSession(userId);
+      return { user: { id: userId, username }, expiresAt: nowPlusDaysIso(30) };
+    }
+    case "sign_in_with_password": {
+      const username = normalizeUsername(String(payload.username ?? ""));
+      const password = String(payload.password ?? "");
+      const rows = await prisma.$queryRawUnsafe<Array<{ id: string; username: string; password_hash: string; password_salt: string }>>(
+        "SELECT id, username, password_hash, password_salt FROM auth_users WHERE username = ?",
+        username
+      );
+      const row = rows[0];
+      if (!row) throw new Error("Invalid username or password.");
+      if (hashPassword(password, row.password_salt) !== row.password_hash) throw new Error("Invalid username or password.");
+      writeSession(row.id);
+      return { user: { id: row.id, username: row.username }, expiresAt: nowPlusDaysIso(30) };
+    }
+    case "get_session": {
+      const session = readSession();
+      if (!session?.userId) return null;
+      const rows = await prisma.$queryRawUnsafe<Array<{ username: string }>>(
+        "SELECT username FROM auth_users WHERE id = ?",
+        session.userId
+      );
+      if (!rows[0]) return null;
+      return { user: { id: session.userId, username: rows[0].username }, expiresAt: nowPlusDaysIso(30) };
+    }
+    case "clear_session": {
+      clearSessionFile();
+      return null;
+    }
+    case "delete_account": {
+      const userId = await currentUserId();
+      await prisma.$executeRawUnsafe("DELETE FROM upload_history WHERE user_id = ?", userId);
+      await prisma.$executeRawUnsafe("DELETE FROM r2_connections WHERE user_id = ?", userId);
+      await prisma.$executeRawUnsafe("DELETE FROM app_settings WHERE user_id = ?", userId);
+      await prisma.$executeRawUnsafe("DELETE FROM auth_users WHERE id = ?", userId);
+      await prisma.$executeRawUnsafe("DELETE FROM \"User\" WHERE id = ?", userId);
+      deleteMasterKey(userId);
+      clearSessionFile();
+      return null;
+    }
+    case "list_connections": {
+      const userId = await currentUserId();
+      return prisma.$queryRawUnsafe(
+        `SELECT id, name, bucket_name as bucketName, endpoint, public_url as publicUrl, region, status, last_connected_at as lastConnectedAt, last_selected_path as lastSelectedPath
+         FROM r2_connections WHERE user_id = ? ORDER BY created_at ASC`,
+        userId
+      );
+    }
+    case "set_active_connection": {
+      const userId = await currentUserId();
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO app_settings (user_id, active_connection_id) VALUES (?, ?)
+         ON CONFLICT(user_id) DO UPDATE SET active_connection_id = excluded.active_connection_id, updated_at = CURRENT_TIMESTAMP`,
+        userId,
+        String(payload.connectionId)
+      );
+      return null;
+    }
+    case "create_connection": {
+      const userId = await currentUserId();
+      const input = payload.input as Record<string, string | undefined>;
+      const connectionId = `conn-${Date.now()}`;
+      const endpointRaw = String(input.endpoint ?? "").trim().replace(/\/+$/, "");
+      const endpoint = endpointRaw.startsWith("http://") || endpointRaw.startsWith("https://") ? endpointRaw : `https://${endpointRaw}`;
+      const region = String(input.region ?? "auto").trim() || "auto";
+      const bucketName = String(input.bucketName ?? "");
+      const accessKeyId = String(input.accessKeyId ?? "");
+      const secretAccessKey = String(input.secretAccessKey ?? "");
+
+      const client = makeClient(endpoint, region, accessKeyId, secretAccessKey);
+      await client.send(new ListObjectsV2Command({ Bucket: bucketName, MaxKeys: 1 }));
+
+      const masterKey = getOrCreateMasterKey(userId);
+      const encryptedAccessKey = encryptSecret(masterKey, userId, connectionId, accessKeyId);
+      const encryptedSecretKey = encryptSecret(masterKey, userId, connectionId, secretAccessKey);
+
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO r2_connections (
+          id, user_id, name, account_id, bucket_name, endpoint, public_url, region,
+          encrypted_access_key_id, encrypted_secret_access_key,
+          encrypted_access_key_iv, encrypted_access_key_tag,
+          encrypted_secret_access_key_iv, encrypted_secret_access_key_tag,
+          encryption_iv, encryption_tag, encryption_version, status, last_selected_path
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'ACTIVE', '/')`,
+        connectionId,
+        userId,
+        String(input.name ?? ""),
+        input.accountId ?? null,
+        bucketName,
+        endpoint,
+        input.publicUrl ?? null,
+        region,
+        encryptedAccessKey.ciphertext,
+        encryptedSecretKey.ciphertext,
+        encryptedAccessKey.iv,
+        encryptedAccessKey.tag,
+        encryptedSecretKey.iv,
+        encryptedSecretKey.tag,
+        encryptedAccessKey.iv,
+        encryptedAccessKey.tag
+      );
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO app_settings (user_id, active_connection_id) VALUES (?, ?)
+         ON CONFLICT(user_id) DO UPDATE SET active_connection_id = excluded.active_connection_id, updated_at = CURRENT_TIMESTAMP`,
+        userId,
+        connectionId
+      );
+
+      return {
+        id: connectionId,
+        name: String(input.name ?? ""),
+        bucketName,
+        endpoint,
+        publicUrl: input.publicUrl,
+        region,
+        status: "ACTIVE",
+        lastConnectedAt: null,
+        lastSelectedPath: "/"
+      };
+    }
+    case "browse_folder":
+    case "create_folder": {
+      const userId = await currentUserId();
+      const connectionId = String(payload.connectionId);
+      const rows = await prisma.$queryRawUnsafe<
+        Array<{
+          endpoint: string;
+          region: string;
+          encrypted_access_key_id: string;
+          encrypted_secret_access_key: string;
+          encrypted_access_key_iv: string;
+          encrypted_access_key_tag: string;
+          encrypted_secret_access_key_iv: string;
+          encrypted_secret_access_key_tag: string;
+          encryption_iv: string;
+          encryption_tag: string;
+        }>
+      >(
+        `SELECT endpoint, region, encrypted_access_key_id, encrypted_secret_access_key,
+                encrypted_access_key_iv, encrypted_access_key_tag,
+                encrypted_secret_access_key_iv, encrypted_secret_access_key_tag,
+                encryption_iv, encryption_tag
+         FROM r2_connections WHERE id = ? AND user_id = ?`,
+        connectionId,
+        userId
+      );
+      const row = rows[0];
+      if (!row) throw new Error("Connection not found.");
+      const masterKey = getOrCreateMasterKey(userId);
+      const accessKeyId = decryptSecret(
+        masterKey,
+        userId,
+        connectionId,
+        row.encrypted_access_key_id,
+        row.encrypted_access_key_iv || row.encryption_iv,
+        row.encrypted_access_key_tag || row.encryption_tag
+      );
+      const secretAccessKey = decryptSecret(
+        masterKey,
+        userId,
+        connectionId,
+        row.encrypted_secret_access_key,
+        row.encrypted_secret_access_key_iv || row.encryption_iv,
+        row.encrypted_secret_access_key_tag || row.encryption_tag
+      );
+      const client = makeClient(row.endpoint, row.region, accessKeyId, secretAccessKey);
+
+      if (action === "create_folder") {
+        const pathValue = String(payload.path ?? "").replace(/^\/+|\/+$/g, "");
+        const folderName = String(payload.folderName ?? "").trim().replace(/^\/+|\/+$/g, "");
+        const objectKey = `${pathValue ? `${pathValue}/` : ""}${folderName}/`;
+        await client.send(new PutObjectCommand({ Bucket: String(payload.bucketName), Key: objectKey, Body: "" }));
+        return null;
+      }
+
+      const pathValue = String(payload.path ?? "").replace(/^\/+|\/+$/g, "");
+      const prefix = pathValue ? `${pathValue}/` : "";
+      const response = await client.send(
+        new ListObjectsV2Command({ Bucket: String(payload.bucketName), Prefix: prefix, Delimiter: "/" })
+      );
+      const folders = (response.CommonPrefixes ?? [])
+        .map((item) => item.Prefix)
+        .filter((value): value is string => Boolean(value))
+        .map((key) => ({ key, name: key.replace(/\/$/, "").split("/").pop() ?? key, childCount: undefined }));
+      const files = (response.Contents ?? [])
+        .filter((item) => item.Key && !item.Key.endsWith("/"))
+        .map((item) => ({
+          key: item.Key as string,
+          name: (item.Key as string).split("/").pop() ?? item.Key,
+          sizeBytes: Number(item.Size ?? 0),
+          mimeType: undefined,
+          lastModified: item.LastModified?.toISOString(),
+          etag: item.ETag,
+          storageClass: item.StorageClass
+        }));
+      return { folders, files };
+    }
+    case "enqueue_uploads": {
+      const userId = await currentUserId();
+      const files = (payload.files as Array<Record<string, unknown>>) ?? [];
+      for (const item of files) {
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO upload_history (
+            id, user_id, connection_id, bucket_name, source_path, object_key,
+            file_name, size_bytes, status, progress
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'QUEUED', 0)`,
+          `upload-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+          userId,
+          String(payload.connectionId),
+          String(payload.bucketName),
+          String(item.sourcePath),
+          String(item.targetPath),
+          String(item.fileName),
+          Number(item.sizeBytes)
+        );
+      }
+      return null;
+    }
+    default:
+      throw new Error(`Unsupported action: ${action}`);
+  }
+}
+
+async function main() {
+  const action = process.argv[2];
+  const inputRaw = fs.readFileSync(0, "utf8");
+  const payload = inputRaw.trim() ? (JSON.parse(inputRaw) as Json) : {};
+  if (!action) fail("Missing action.");
+  try {
+    const data = await run(action, payload);
+    out(data);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    fail(message);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+void main();
