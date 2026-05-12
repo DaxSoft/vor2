@@ -94,7 +94,11 @@ export const useExplorerStore = create<ExplorerStoreState>((set, get) => ({
     if (!state.activeConnectionId) {
       return;
     }
-    await explorerService.deleteObject(state.activeConnectionId, state.bucketName, key);
+    if (key.endsWith("/")) {
+      await explorerService.deletePrefix(state.activeConnectionId, state.bucketName, key);
+    } else {
+      await explorerService.deleteObject(state.activeConnectionId, state.bucketName, key);
+    }
     await get().refresh();
   },
   setSearchQuery(query) {

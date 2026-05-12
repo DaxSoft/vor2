@@ -1,4 +1,5 @@
 import { File, Folder } from "lucide-react";
+import type { MouseEvent } from "react";
 import { formatBytes, formatDate } from "@/lib/format";
 import type { R2ExplorerNode } from "./explorer.types";
 
@@ -6,12 +7,14 @@ export function ExplorerTable({
   nodes,
   selectedNodeId,
   onSelect,
-  onOpen
+  onOpen,
+  onContextMenu
 }: {
   nodes: R2ExplorerNode[];
   selectedNodeId: string | null;
   onSelect: (id: string) => void;
   onOpen: (id: string) => void;
+  onContextMenu: (event: MouseEvent, node: R2ExplorerNode) => void;
 }) {
   return (
     <table className="w-full table-fixed text-left text-[13px]">
@@ -35,6 +38,7 @@ export function ExplorerTable({
             onDoubleClick={() => {
               void onOpen(node.id);
             }}
+            onContextMenu={(event) => onContextMenu(event, node)}
           >
             <td className="px-3 py-2">
               <div className="flex items-center gap-2">
@@ -43,7 +47,9 @@ export function ExplorerTable({
               </div>
             </td>
             <td className="px-3 py-2 text-app-muted">{node.kind === "folder" ? "Folder" : node.mimeType ?? "File"}</td>
-            <td className="px-3 py-2 text-app-muted">{node.kind === "file" ? formatBytes(node.sizeBytes) : "-"}</td>
+            <td className="px-3 py-2 text-app-muted">
+              {node.kind === "file" ? formatBytes(node.sizeBytes) : formatBytes(node.totalSizeBytes ?? 0)}
+            </td>
             <td className="px-3 py-2 text-app-muted">{node.kind === "file" ? formatDate(node.lastModified) : "-"}</td>
             <td className="px-3 py-2 text-app-muted">{node.kind === "file" ? (node.isPublic ? "Public" : "Private") : "-"}</td>
           </tr>

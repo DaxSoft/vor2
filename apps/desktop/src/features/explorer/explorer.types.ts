@@ -11,6 +11,7 @@ export interface R2BaseNode {
 export interface R2FolderNode extends R2BaseNode {
   kind: "folder";
   childCount?: number;
+  totalSizeBytes?: number;
 }
 
 export interface R2FileNode extends R2BaseNode {

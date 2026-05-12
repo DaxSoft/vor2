@@ -3,7 +3,7 @@ import { mapListingToNodes } from "./object-mapper";
 import type { R2ExplorerNode } from "./explorer.types";
 
 interface ExplorerListingResult {
-  folders: Array<{ key: string; name: string; childCount?: number }>;
+  folders: Array<{ key: string; name: string; childCount?: number; totalSizeBytes?: number }>;
   files: Array<{
     key: string;
     name: string;
@@ -40,5 +40,22 @@ export const explorerService = {
       bucketName,
       objectKey
     });
+  },
+
+  async deletePrefix(connectionId: string, bucketName: string, prefix: string): Promise<void> {
+    await invoke("delete_prefix", {
+      connectionId,
+      bucketName,
+      prefix
+    });
+  },
+
+  async listPrefixObjects(connectionId: string, bucketName: string, prefix: string): Promise<string[]> {
+    const result = await invoke<{ keys: string[] }>("list_prefix_objects", {
+      connectionId,
+      bucketName,
+      prefix
+    });
+    return result.keys;
   }
 };

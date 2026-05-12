@@ -28,10 +28,20 @@ export const useUploadStore = create<UploadStoreState>((set, get) => ({
 
     set({ tasks: [...get().tasks, ...tasks], isQueueVisible: true });
 
-    await uploadService.enqueueUploads(connectionId, bucketName, targetPath, entries);
-
-    for (const task of tasks) {
-      await get().startTask(task.id);
+    try {
+      await uploadService.enqueueUploads(connectionId, bucketName, targetPath, entries);
+      set({
+        tasks: get().tasks.map((item) =>
+          tasks.some((task) => task.id === item.id) ? updateUploadProgress(item, item.sizeBytes, item.sizeBytes) : item
+        )
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Upload failed";
+      set({
+        tasks: get().tasks.map((item) =>
+          tasks.some((task) => task.id === item.id) ? { ...item, status: "failed", errorMessage: message } : item
+        )
+      });
     }
   },
   async startTask(taskId) {
@@ -64,7 +74,20 @@ export const useUploadStore = create<UploadStoreState>((set, get) => ({
         item.id === taskId ? { ...item, status: "queued", progress: 0, uploadedBytes: 0, errorMessage: undefined } : item
       )
     });
-    await get().startTask(taskId);
+    try {
+      const targetPath = task.objectKey.includes("/") ? `/${task.objectKey.split("/").slice(0, -1).join("/")}` : "/";
+      await uploadService.enqueueUploads(task.connectionId, task.bucketName, targetPath, [
+        { path: task.sourcePath, fileName: task.fileName, sizeBytes: task.sizeBytes }
+      ]);
+      set({
+        tasks: get().tasks.map((item) => (item.id === taskId ? updateUploadProgress(item, item.sizeBytes, item.sizeBytes) : item))
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Upload failed";
+      set({
+        tasks: get().tasks.map((item) => (item.id === taskId ? { ...item, status: "failed", errorMessage: message } : item))
+      });
+    }
   },
   clearCompleted() {
     const remaining = get().tasks.filter((item) => item.status !== "completed");

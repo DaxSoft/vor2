@@ -2,7 +2,7 @@ import { buildPublicUrl } from "@r2-explorer/r2/src/path-utils";
 import type { R2ExplorerNode, R2FileNode, R2FolderNode } from "./explorer.types";
 
 interface RawListing {
-  folders: Array<{ key: string; name: string; childCount?: number }>;
+  folders: Array<{ key: string; name: string; childCount?: number; totalSizeBytes?: number }>;
   files: Array<{
     key: string;
     name: string;
@@ -21,7 +21,8 @@ export function mapListingToNodes(listing: RawListing, publicUrl?: string): R2Ex
     name: folder.name,
     path: folder.key,
     kind: "folder",
-    childCount: folder.childCount
+    childCount: folder.childCount,
+    totalSizeBytes: folder.totalSizeBytes
   }));
 
   const files: R2FileNode[] = listing.files.map((file) => ({

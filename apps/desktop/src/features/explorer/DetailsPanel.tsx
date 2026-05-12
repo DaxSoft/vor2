@@ -5,6 +5,11 @@ import type { R2FileNode } from "./explorer.types";
 
 export function DetailsPanel({ node, onDelete }: { node: R2FileNode; onDelete: (key: string) => Promise<void> }) {
   const [message, setMessage] = useState<string | null>(null);
+  const extension = node.name.split(".").pop()?.toLowerCase() ?? "";
+  const mime = (node.mimeType ?? "").toLowerCase();
+  const isImage = mime.startsWith("image/") || ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"].includes(extension);
+  const isAudio = mime.startsWith("audio/") || ["mp3", "wav", "ogg", "aac", "m4a", "flac"].includes(extension);
+  const isVideo = mime.startsWith("video/") || ["mp4", "webm", "mov", "mkv", "avi"].includes(extension);
 
   const copyUrl = async () => {
     if (!node.publicUrl) {
@@ -45,15 +50,22 @@ export function DetailsPanel({ node, onDelete }: { node: R2FileNode; onDelete: (
   return (
     <div className="space-y-3 text-xs">
       <h3 className="text-sm font-semibold text-app-text">{node.name}</h3>
+      {node.publicUrl && (isImage || isAudio || isVideo) ? (
+        <div className="rounded-lg border border-app-border bg-black/20 p-2">
+          {isImage ? <img src={node.publicUrl} alt={node.name} className="max-h-40 w-full rounded object-contain" /> : null}
+          {isAudio ? <audio controls src={node.publicUrl} className="w-full" /> : null}
+          {isVideo ? <video controls src={node.publicUrl} className="max-h-48 w-full rounded" /> : null}
+        </div>
+      ) : null}
       <div className="space-y-1 text-app-muted">
         <p>Size: {formatBytes(node.sizeBytes)}</p>
         <p>Type: {node.mimeType ?? "Unknown"}</p>
         <p>Last Modified: {formatDate(node.lastModified)}</p>
-        <p>ETag: {node.etag ?? "-"}</p>
-        <p>Storage Class: {node.storageClass ?? "-"}</p>
-        <p>Object Key: {node.key}</p>
+        <p className="break-all">ETag: {node.etag ?? "-"}</p>
+        <p className="break-all">Storage Class: {node.storageClass ?? "-"}</p>
+        <p className="break-all">Object Key: {node.key}</p>
         <p>Status: {node.isPublic ? "Public" : "Private"}</p>
-        <p>Public URL: {node.publicUrl ?? "No public URL configured"}</p>
+        <p className="break-all">Public URL: {node.publicUrl ?? "No public URL configured"}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-2">

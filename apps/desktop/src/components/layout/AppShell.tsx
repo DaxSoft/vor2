@@ -77,12 +77,13 @@ export function AppShell() {
       if (event.payload.type !== "drop") {
         return;
       }
-      if (!activeConnection) {
-        return;
-      }
-      setQueueVisible(true);
-      const entries = await invoke<FileDialogEntry[]>("inspect_file_paths", { paths: event.payload.paths });
-      void addPathEntries(entries, currentPath, activeConnection.id, activeConnection.bucketName);
+    if (!activeConnection) {
+      return;
+    }
+    setQueueVisible(true);
+    const entries = await invoke<FileDialogEntry[]>("inspect_file_paths", { paths: event.payload.paths });
+    await addPathEntries(entries, currentPath, activeConnection.id, activeConnection.bucketName);
+    await refresh();
     }).then((unlisten) => {
       unsubscribers.push(unlisten);
     });
@@ -105,8 +106,9 @@ export function AppShell() {
         return;
       }
       await addPathEntries(entries, currentPath, activeConnection.id, activeConnection.bucketName);
+      await refresh();
     },
-    [activeConnection, addPathEntries, currentPath, setQueueVisible]
+    [activeConnection, addPathEntries, currentPath, refresh, setQueueVisible]
   );
 
   const onNewFolder = useMemo(
@@ -175,6 +177,15 @@ export function AppShell() {
               <UploadQueue
                 onPickFiles={() => {
                   void onUpload();
+                }}
+                onDropPaths={(paths) => {
+                  if (!activeConnection) {
+                    return;
+                  }
+                  void invoke<FileDialogEntry[]>("inspect_file_paths", { paths }).then(async (entries) => {
+                    await addPathEntries(entries, currentPath, activeConnection.id, activeConnection.bucketName);
+                    await refresh();
+                  });
                 }}
               />
             ) : null}

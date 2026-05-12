@@ -106,6 +106,35 @@ function makeClient(endpoint: string, region: string, accessKeyId: string, secre
   });
 }
 
+async function listAllObjects(client: S3Client, bucket: string, prefix: string): Promise<Array<{ key: string; size: number }>> {
+  const items: Array<{ key: string; size: number }> = [];
+  let continuationToken: string | undefined;
+
+  do {
+    const response = await client.send(
+      new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: prefix,
+        ContinuationToken: continuationToken
+      })
+    );
+
+    for (const item of response.Contents ?? []) {
+      if (!item.Key || item.Key.endsWith("/")) {
+        continue;
+      }
+      items.push({
+        key: item.Key,
+        size: Number(item.Size ?? 0)
+      });
+    }
+
+    continuationToken = response.IsTruncated ? response.NextContinuationToken : undefined;
+  } while (continuationToken);
+
+  return items;
+}
+
 async function currentUserId(): Promise<string> {
   const session = readSession();
   if (!session?.userId) throw new Error("user session required");
@@ -338,7 +367,9 @@ async function run(action: string, payload: Json): Promise<unknown> {
     }
     case "browse_folder":
     case "create_folder":
-    case "delete_object": {
+    case "delete_object":
+    case "delete_prefix":
+    case "list_prefix_objects": {
       const userId = await currentUserId();
       const connectionId = String(payload.connectionId);
       const rows = await prisma.$queryRawUnsafe<
@@ -401,6 +432,31 @@ async function run(action: string, payload: Json): Promise<unknown> {
         return null;
       }
 
+      if (action === "delete_prefix") {
+        const prefix = String(payload.prefix ?? "").replace(/^\/+/, "");
+        if (!prefix.trim()) {
+          throw new Error("Folder prefix is required.");
+        }
+        const objects = await listAllObjects(client, String(payload.bucketName), prefix.endsWith("/") ? prefix : `${prefix}/`);
+        for (const object of objects) {
+          await client.send(new DeleteObjectCommand({ Bucket: String(payload.bucketName), Key: object.key }));
+        }
+        await client.send(
+          new DeleteObjectCommand({
+            Bucket: String(payload.bucketName),
+            Key: prefix.endsWith("/") ? prefix : `${prefix}/`
+          })
+        );
+        return { deleted: objects.length };
+      }
+
+      if (action === "list_prefix_objects") {
+        const prefix = String(payload.prefix ?? "").replace(/^\/+/, "");
+        const normalizedPrefix = prefix.endsWith("/") ? prefix : `${prefix}/`;
+        const objects = await listAllObjects(client, String(payload.bucketName), normalizedPrefix);
+        return { keys: objects.map((object) => object.key) };
+      }
+
       const pathValue = String(payload.path ?? "").replace(/^\/+|\/+$/g, "");
       const prefix = pathValue ? `${pathValue}/` : "";
       const response = await client.send(
@@ -409,7 +465,12 @@ async function run(action: string, payload: Json): Promise<unknown> {
       const folders = (response.CommonPrefixes ?? [])
         .map((item) => item.Prefix)
         .filter((value): value is string => Boolean(value))
-        .map((key) => ({ key, name: key.replace(/\/$/, "").split("/").pop() ?? key, childCount: undefined }));
+        .map(async (key) => {
+          const items = await listAllObjects(client, String(payload.bucketName), key);
+          const totalSizeBytes = items.reduce((sum, item) => sum + item.size, 0);
+          return { key, name: key.replace(/\/$/, "").split("/").pop() ?? key, childCount: undefined, totalSizeBytes };
+        });
+      const resolvedFolders = await Promise.all(folders);
       const files = (response.Contents ?? [])
         .filter((item) => item.Key && !item.Key.endsWith("/"))
         .map((item) => ({
@@ -421,26 +482,100 @@ async function run(action: string, payload: Json): Promise<unknown> {
           etag: item.ETag,
           storageClass: item.StorageClass
         }));
-      return { folders, files };
+      return { folders: resolvedFolders, files };
     }
     case "enqueue_uploads": {
       const userId = await currentUserId();
       const files = (payload.files as Array<Record<string, unknown>>) ?? [];
+      const connectionId = String(payload.connectionId);
+      const connectionRows = await prisma.$queryRawUnsafe<
+        Array<{
+          endpoint: string;
+          region: string;
+          encrypted_access_key_id: string;
+          encrypted_secret_access_key: string;
+          encrypted_access_key_iv: string;
+          encrypted_access_key_tag: string;
+          encrypted_secret_access_key_iv: string;
+          encrypted_secret_access_key_tag: string;
+          encryption_iv: string;
+          encryption_tag: string;
+        }>
+      >(
+        `SELECT endpoint, region, encrypted_access_key_id, encrypted_secret_access_key,
+                encrypted_access_key_iv, encrypted_access_key_tag,
+                encrypted_secret_access_key_iv, encrypted_secret_access_key_tag,
+                encryption_iv, encryption_tag
+         FROM r2_connections WHERE id = ? AND user_id = ?`,
+        connectionId,
+        userId
+      );
+      const connection = connectionRows[0];
+      if (!connection) {
+        throw new Error("Connection not found.");
+      }
+      const masterKey = getOrCreateMasterKey(userId);
+      const accessKeyId = decryptSecret(
+        masterKey,
+        userId,
+        connectionId,
+        connection.encrypted_access_key_id,
+        connection.encrypted_access_key_iv || connection.encryption_iv,
+        connection.encrypted_access_key_tag || connection.encryption_tag
+      );
+      const secretAccessKey = decryptSecret(
+        masterKey,
+        userId,
+        connectionId,
+        connection.encrypted_secret_access_key,
+        connection.encrypted_secret_access_key_iv || connection.encryption_iv,
+        connection.encrypted_secret_access_key_tag || connection.encryption_tag
+      );
+      const client = makeClient(connection.endpoint, connection.region, accessKeyId, secretAccessKey);
+
       for (const item of files) {
+        const sourcePath = String(item.sourcePath);
+        const objectKey = String(item.targetPath).replace(/^\/+/, "");
+        const fileName = String(item.fileName);
+        const sizeBytes = Number(item.sizeBytes);
+        const uploadId = `upload-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
         await prisma.$executeRawUnsafe(
           `INSERT INTO upload_history (
             id, user_id, connection_id, bucket_name, source_path, object_key,
             file_name, size_bytes, status, progress
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'QUEUED', 0)`,
-          `upload-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'UPLOADING', 0)`,
+          uploadId,
           userId,
-          String(payload.connectionId),
+          connectionId,
           String(payload.bucketName),
-          String(item.sourcePath),
-          String(item.targetPath),
-          String(item.fileName),
-          Number(item.sizeBytes)
+          sourcePath,
+          objectKey,
+          fileName,
+          sizeBytes
         );
+
+        try {
+          const fileBuffer = fs.readFileSync(sourcePath);
+          await client.send(
+            new PutObjectCommand({
+              Bucket: String(payload.bucketName),
+              Key: objectKey,
+              Body: fileBuffer
+            })
+          );
+          await prisma.$executeRawUnsafe(
+            `UPDATE upload_history SET status = 'COMPLETED', progress = 100, completed_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            uploadId
+          );
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Upload failed";
+          await prisma.$executeRawUnsafe(
+            `UPDATE upload_history SET status = 'FAILED', error_message = ? WHERE id = ?`,
+            message,
+            uploadId
+          );
+          throw new Error(message);
+        }
       }
       return null;
     }

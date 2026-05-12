@@ -64,6 +64,7 @@ pub struct FolderNodeDto {
     pub key: String,
     pub name: String,
     pub child_count: Option<u32>,
+    pub total_size_bytes: Option<u64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -83,6 +84,12 @@ pub struct FileNodeDto {
 pub struct BrowseFolderResult {
     pub folders: Vec<FolderNodeDto>,
     pub files: Vec<FileNodeDto>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrefixObjectsDto {
+    pub keys: Vec<String>,
 }
 
 fn workspace_root() -> Result<PathBuf, String> {
@@ -345,6 +352,39 @@ pub async fn delete_object(
         }),
     )?;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn delete_prefix(
+    connection_id: String,
+    bucket_name: String,
+    prefix: String,
+) -> Result<(), String> {
+    let _: Value = run_bridge(
+        "delete_prefix",
+        serde_json::json!({
+            "connectionId": connection_id,
+            "bucketName": bucket_name,
+            "prefix": prefix
+        }),
+    )?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn list_prefix_objects(
+    connection_id: String,
+    bucket_name: String,
+    prefix: String,
+) -> Result<PrefixObjectsDto, String> {
+    run_bridge(
+        "list_prefix_objects",
+        serde_json::json!({
+            "connectionId": connection_id,
+            "bucketName": bucket_name,
+            "prefix": prefix
+        }),
+    )
 }
 
 #[tauri::command]
