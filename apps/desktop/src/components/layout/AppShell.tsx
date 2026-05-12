@@ -32,10 +32,14 @@ export function AppShell() {
   const pauseAll = useUploadStore((state) => state.pauseAll);
   const resumeAll = useUploadStore((state) => state.resumeAll);
   const isQueuePaused = useUploadStore((state) => state.isPaused);
+  const uploadTasks = useUploadStore((state) => state.tasks);
+  const isQueueVisible = useUploadStore((state) => state.isQueueVisible);
+  const setQueueVisible = useUploadStore((state) => state.setQueueVisible);
   const [search, setSearch] = useState("");
   const [folderName, setFolderName] = useState("New folder");
   const [showSettings, setShowSettings] = useState(false);
   const [showConnectionForm, setShowConnectionForm] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   const activeConnection = connections.find((item) => item.id === activeConnectionId) ?? null;
 
@@ -43,7 +47,7 @@ export function AppShell() {
     if (!activeConnection) {
       return;
     }
-    setActiveExplorerConnection(activeConnection.id, activeConnection.bucketName);
+    setActiveExplorerConnection(activeConnection.id, activeConnection.bucketName, activeConnection.publicUrl);
     void loadPath(activeConnection.lastSelectedPath || "/");
   }, [activeConnection, loadPath, setActiveExplorerConnection]);
 
@@ -76,6 +80,7 @@ export function AppShell() {
       if (!activeConnection) {
         return;
       }
+      setQueueVisible(true);
       const entries = await invoke<FileDialogEntry[]>("inspect_file_paths", { paths: event.payload.paths });
       void addPathEntries(entries, currentPath, activeConnection.id, activeConnection.bucketName);
     }).then((unlisten) => {
@@ -87,20 +92,21 @@ export function AppShell() {
         unlisten();
       }
     };
-  }, [activeConnection, addPathEntries, currentPath, isQueuePaused, pauseAll, resumeAll]);
+  }, [activeConnection, addPathEntries, currentPath, isQueuePaused, pauseAll, resumeAll, setQueueVisible]);
 
   const onUpload = useMemo(
     () => async () => {
       if (!activeConnection) {
         return;
       }
+      setQueueVisible(true);
       const entries = await invoke<FileDialogEntry[]>("open_file_dialog");
       if (entries.length === 0) {
         return;
       }
       await addPathEntries(entries, currentPath, activeConnection.id, activeConnection.bucketName);
     },
-    [activeConnection, addPathEntries, currentPath]
+    [activeConnection, addPathEntries, currentPath, setQueueVisible]
   );
 
   const onNewFolder = useMemo(
@@ -134,6 +140,10 @@ export function AppShell() {
           onOpenSettings={() => {
             setShowSettings(true);
           }}
+          onToggleSidebar={() => {
+            setSidebarVisible((value) => !value);
+          }}
+          sidebarVisible={sidebarVisible}
           onMinimize={() => {
             void minimizeWindow();
           }}
@@ -148,22 +158,26 @@ export function AppShell() {
           }}
         />
 
-        <div className="grid min-h-0 flex-1 grid-cols-[280px_1fr] gap-3 p-3">
-          <Sidebar
-            onAddConnection={() => {
-              setShowConnectionForm(true);
-            }}
-            onOpenSettings={() => {
-              setShowSettings(true);
-            }}
-          />
-          <div className="flex min-h-0 flex-col gap-3">
-            <ExplorerView />
-            <UploadQueue
-              onPickFiles={() => {
-                void onUpload();
+        <div className={`grid min-h-0 flex-1 gap-3 p-3 ${sidebarVisible ? "grid-cols-[280px_1fr]" : "grid-cols-1"}`}>
+          {sidebarVisible ? (
+            <Sidebar
+              onAddConnection={() => {
+                setShowConnectionForm(true);
+              }}
+              onOpenSettings={() => {
+                setShowSettings(true);
               }}
             />
+          ) : null}
+          <div className="flex min-h-0 flex-col gap-3">
+            <ExplorerView />
+            {isQueueVisible || uploadTasks.length > 0 ? (
+              <UploadQueue
+                onPickFiles={() => {
+                  void onUpload();
+                }}
+              />
+            ) : null}
           </div>
         </div>
       </div>

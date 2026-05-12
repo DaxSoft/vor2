@@ -32,5 +32,13 @@ export const explorerService = {
       path,
       folderName
     });
+  },
+
+  async deleteObject(connectionId: string, bucketName: string, objectKey: string): Promise<void> {
+    await invoke("delete_object", {
+      connectionId,
+      bucketName,
+      objectKey
+    });
   }
 };

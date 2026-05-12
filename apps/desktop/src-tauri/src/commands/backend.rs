@@ -87,25 +87,89 @@ pub struct BrowseFolderResult {
 
 fn workspace_root() -> Result<PathBuf, String> {
     let here = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    here.join("..").join("..")
-        .canonicalize()
-        .map_err(|err| err.to_string())
+    Ok(here.join("..").join("..").join(".."))
 }
 
 fn run_bridge<T: for<'de> Deserialize<'de>>(action: &str, payload: Value) -> Result<T, String> {
     let root = workspace_root()?;
-    let mut child = Command::new("yarn")
-        .arg("--silent")
-        .arg("workspace")
-        .arg("@r2-explorer/database")
-        .arg("desktop:bridge")
-        .arg(action)
-        .current_dir(root)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|err| err.to_string())?;
+    let bridge_script = root
+        .join("packages")
+        .join("database")
+        .join("src")
+        .join("desktop-bridge.ts");
+    let tsx_cli = root
+        .join("node_modules")
+        .join("tsx")
+        .join("dist")
+        .join("cli.mjs");
+
+    let local_tsx_windows = root.join("node_modules").join(".bin").join("tsx.cmd");
+    let local_tsx_unix = root.join("node_modules").join(".bin").join("tsx");
+
+    let mut spawn_errors: Vec<String> = Vec::new();
+    let mut child = if tsx_cli.exists() {
+        Command::new("node")
+            .arg(&tsx_cli)
+            .arg(&bridge_script)
+            .arg(action)
+            .current_dir(&root)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|err| err.to_string())
+    } else if local_tsx_windows.exists() {
+        Command::new(local_tsx_windows)
+            .arg(&bridge_script)
+            .arg(action)
+            .current_dir(&root)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|err| err.to_string())
+    } else if local_tsx_unix.exists() {
+        Command::new(local_tsx_unix)
+            .arg(&bridge_script)
+            .arg(action)
+            .current_dir(&root)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|err| err.to_string())
+    } else {
+        Err(String::from("local tsx binary not found in node_modules/.bin"))
+    };
+
+    if child.is_err() {
+        if let Err(message) = child {
+            spawn_errors.push(format!("tsx launch failed: {message}"));
+        }
+        child = Command::new("yarn")
+            .arg("--silent")
+            .arg("workspace")
+            .arg("@r2-explorer/database")
+            .arg("desktop:bridge")
+            .arg(action)
+            .current_dir(&root)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|err| err.to_string());
+        if child.is_err() {
+            if let Err(message) = child {
+                spawn_errors.push(format!("yarn launch failed: {message}"));
+            }
+            return Err(format!(
+                "Could not start backend bridge process. {}",
+                spawn_errors.join(" | ")
+            ));
+        }
+    }
+
+    let mut child = child.expect("bridge child exists after fallback");
 
     if let Some(stdin) = child.stdin.as_mut() {
         stdin
@@ -116,9 +180,15 @@ fn run_bridge<T: for<'de> Deserialize<'de>>(action: &str, payload: Value) -> Res
     let output = child.wait_with_output().map_err(|err| err.to_string())?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        if !stderr.trim().is_empty() {
-            return Err(stderr);
-        }
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let message = if stderr.trim().is_empty() {
+            stdout
+        } else if stdout.trim().is_empty() {
+            stderr
+        } else {
+            format!("{stderr}\n{stdout}")
+        };
+        return Err(message);
     }
 
     let stdout = String::from_utf8(output.stdout).map_err(|err| err.to_string())?;
@@ -132,7 +202,7 @@ fn run_bridge<T: for<'de> Deserialize<'de>>(action: &str, payload: Value) -> Res
             }
             serde_json::from_str::<Value>(trimmed).ok()
         })
-        .ok_or_else(|| String::from("Invalid backend response from Prisma bridge."))?;
+        .ok_or_else(|| format!("Invalid backend response from Prisma bridge. Raw output:\n{stdout}"))?;
     let ok = parsed
         .get("ok")
         .and_then(|value| value.as_bool())
@@ -255,6 +325,23 @@ pub async fn create_folder(
             "bucketName": bucket_name,
             "path": path,
             "folderName": folder_name
+        }),
+    )?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn delete_object(
+    connection_id: String,
+    bucket_name: String,
+    object_key: String,
+) -> Result<(), String> {
+    let _: Value = run_bridge(
+        "delete_object",
+        serde_json::json!({
+            "connectionId": connection_id,
+            "bucketName": bucket_name,
+            "objectKey": object_key
         }),
     )?;
     Ok(())

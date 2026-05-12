@@ -31,6 +31,7 @@ export type SortBy = "name" | "type" | "size" | "modified";
 export interface ExplorerStoreState {
   activeConnectionId: string | null;
   bucketName: string;
+  publicUrl?: string;
   currentPath: string;
   nodes: R2ExplorerNode[];
   selectedNodeId: string | null;
@@ -48,7 +49,8 @@ export interface ExplorerStoreState {
   goBack: () => Promise<void>;
   goParent: () => Promise<void>;
   createFolder: (name: string) => Promise<void>;
+  deleteNode: (key: string) => Promise<void>;
   setSearchQuery: (query: string) => void;
   setSort: (sortBy: SortBy, direction: "asc" | "desc") => void;
-  setActiveConnection: (connectionId: string, bucketName: string) => void;
+  setActiveConnection: (connectionId: string, bucketName: string, publicUrl?: string) => void;
 }

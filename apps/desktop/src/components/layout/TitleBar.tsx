@@ -1,4 +1,4 @@
-import { FolderPlus, Minus, MoreHorizontal, RefreshCw, Search, Square, UploadCloud, X } from "lucide-react";
+import { FolderPlus, Minus, MoreHorizontal, PanelLeftClose, PanelLeftOpen, RefreshCw, Search, Square, UploadCloud, X } from "lucide-react";
 import logoMark from "@/assets/logo-mark.svg";
 
 export function TitleBar({
@@ -8,6 +8,8 @@ export function TitleBar({
   onUpload,
   onRefresh,
   onOpenSettings,
+  onToggleSidebar,
+  sidebarVisible,
   onMinimize,
   onToggleMaximize,
   onClose,
@@ -19,6 +21,8 @@ export function TitleBar({
   onUpload: () => void;
   onRefresh: () => void;
   onOpenSettings: () => void;
+  onToggleSidebar: () => void;
+  sidebarVisible: boolean;
   onMinimize: () => void;
   onToggleMaximize: () => void;
   onClose: () => void;
@@ -66,6 +70,15 @@ export function TitleBar({
         </button>
         <button data-no-drag="true" type="button" aria-label="Refresh" className="rounded-lg border border-app-border bg-white/5 px-2 py-1.5 text-xs" onClick={onRefresh}>
           <RefreshCw className="h-3.5 w-3.5" />
+        </button>
+        <button
+          data-no-drag="true"
+          type="button"
+          aria-label="Toggle sidebar"
+          className="rounded-lg border border-app-border bg-white/5 px-2 py-1.5 text-xs"
+          onClick={onToggleSidebar}
+        >
+          {sidebarVisible ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeftOpen className="h-3.5 w-3.5" />}
         </button>
         <button data-no-drag="true" type="button" aria-label="More" className="rounded-lg border border-app-border bg-white/5 px-2 py-1.5 text-xs" onClick={onOpenSettings}>
           <MoreHorizontal className="h-3.5 w-3.5" />

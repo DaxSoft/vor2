@@ -74,6 +74,7 @@ pub fn run() {
             commands::backend::set_active_connection,
             commands::backend::browse_folder,
             commands::backend::create_folder,
+            commands::backend::delete_object,
             commands::backend::enqueue_uploads
         ])
         .run(tauri::generate_context!())

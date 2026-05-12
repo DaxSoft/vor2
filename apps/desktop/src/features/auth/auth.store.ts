@@ -2,6 +2,22 @@ import { create } from "zustand";
 import { authService } from "./auth.service";
 import type { AuthStoreState } from "./auth.types";
 
+function toErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+  if (error && typeof error === "object") {
+    const maybeMessage = (error as { message?: unknown }).message;
+    if (typeof maybeMessage === "string" && maybeMessage.trim()) {
+      return maybeMessage;
+    }
+  }
+  return fallback;
+}
+
 export const useAuthStore = create<AuthStoreState>((set) => ({
   isLoading: true,
   isLocked: false,
@@ -12,9 +28,8 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
     try {
       const session = await authService.getSession();
       set({ session, isLocked: false, isLoading: false });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Sign-in failed.";
-      set({ session: null, isLoading: false, error: message });
+    } catch {
+      set({ session: null, isLoading: false, isLocked: true, error: null });
     }
   },
   async signInWithPassword(username, password) {
@@ -23,7 +38,7 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
       const session = await authService.signInWithPassword(username, password);
       set({ session, isLoading: false, isLocked: false });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Invalid username or password.";
+      const message = toErrorMessage(error, "Invalid username or password.");
       set({ isLoading: false, error: message });
     }
   },
@@ -33,8 +48,7 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
       const session = await authService.signUpWithPassword(username, password);
       set({ session, isLoading: false, isLocked: false });
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Could not create account with those credentials.";
+      const message = toErrorMessage(error, "Could not create account with those credentials.");
       set({ isLoading: false, error: message });
     }
   },
@@ -48,7 +62,7 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
       await authService.deleteAccount();
       set({ session: null, isLocked: true, isLoading: false });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not delete account.";
+      const message = toErrorMessage(error, "Could not delete account.");
       set({ isLoading: false, error: message });
     }
   },

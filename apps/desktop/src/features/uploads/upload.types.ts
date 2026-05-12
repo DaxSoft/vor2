@@ -34,6 +34,7 @@ export interface UploadStoreState {
   isQueueVisible: boolean;
   isPaused: boolean;
   concurrency: number;
+  setQueueVisible: (visible: boolean) => void;
   addPathEntries: (entries: UploadLocalEntry[], targetPath: string, connectionId: string, bucketName: string) => Promise<void>;
   startTask: (taskId: string) => Promise<void>;
   pauseTask: (taskId: string) => void;

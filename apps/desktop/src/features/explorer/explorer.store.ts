@@ -28,6 +28,7 @@ function parentPath(path: string): string {
 export const useExplorerStore = create<ExplorerStoreState>((set, get) => ({
   activeConnectionId: null,
   bucketName: "",
+  publicUrl: undefined,
   currentPath: "/",
   nodes: [],
   selectedNodeId: null,
@@ -45,7 +46,7 @@ export const useExplorerStore = create<ExplorerStoreState>((set, get) => ({
     }
     set({ isLoading: true, error: null, currentPath: path });
     try {
-      const nodes = await explorerService.browse(state.activeConnectionId, state.bucketName, path);
+      const nodes = await explorerService.browse(state.activeConnectionId, state.bucketName, path, state.publicUrl);
       set({ nodes, isLoading: false, selectedNodeId: null });
     } catch (error) {
       set({
@@ -88,13 +89,21 @@ export const useExplorerStore = create<ExplorerStoreState>((set, get) => ({
     await explorerService.createFolder(state.activeConnectionId, state.bucketName, state.currentPath, name);
     await get().refresh();
   },
+  async deleteNode(key) {
+    const state = get();
+    if (!state.activeConnectionId) {
+      return;
+    }
+    await explorerService.deleteObject(state.activeConnectionId, state.bucketName, key);
+    await get().refresh();
+  },
   setSearchQuery(query) {
     set({ searchQuery: query });
   },
   setSort(sortBy, direction) {
     set({ sortBy, sortDirection: direction });
   },
-  setActiveConnection(connectionId, bucketName) {
-    set({ activeConnectionId: connectionId, bucketName });
+  setActiveConnection(connectionId, bucketName, publicUrl) {
+    set({ activeConnectionId: connectionId, bucketName, publicUrl });
   }
 }));

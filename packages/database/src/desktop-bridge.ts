@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
-import { S3Client, ListObjectsV2Command, PutObjectCommand } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { prisma } from "./client";
 
 type Json = Record<string, unknown>;
@@ -337,7 +337,8 @@ async function run(action: string, payload: Json): Promise<unknown> {
       };
     }
     case "browse_folder":
-    case "create_folder": {
+    case "create_folder":
+    case "delete_object": {
       const userId = await currentUserId();
       const connectionId = String(payload.connectionId);
       const rows = await prisma.$queryRawUnsafe<
@@ -388,6 +389,15 @@ async function run(action: string, payload: Json): Promise<unknown> {
         const folderName = String(payload.folderName ?? "").trim().replace(/^\/+|\/+$/g, "");
         const objectKey = `${pathValue ? `${pathValue}/` : ""}${folderName}/`;
         await client.send(new PutObjectCommand({ Bucket: String(payload.bucketName), Key: objectKey, Body: "" }));
+        return null;
+      }
+
+      if (action === "delete_object") {
+        const objectKey = String(payload.objectKey ?? "");
+        if (!objectKey.trim()) {
+          throw new Error("Object key is required.");
+        }
+        await client.send(new DeleteObjectCommand({ Bucket: String(payload.bucketName), Key: objectKey }));
         return null;
       }
 

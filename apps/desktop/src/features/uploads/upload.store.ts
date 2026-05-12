@@ -5,9 +5,12 @@ import type { UploadStoreState } from "./upload.types";
 
 export const useUploadStore = create<UploadStoreState>((set, get) => ({
   tasks: [],
-  isQueueVisible: true,
+  isQueueVisible: false,
   isPaused: false,
   concurrency: 3,
+  setQueueVisible(visible) {
+    set({ isQueueVisible: visible });
+  },
   async addPathEntries(entries, targetPath, connectionId, bucketName) {
     const tasks = entries.map((entry) => ({
       id: `${Date.now()}-${entry.fileName}`,
@@ -23,7 +26,7 @@ export const useUploadStore = create<UploadStoreState>((set, get) => ({
       status: "queued" as const
     }));
 
-    set({ tasks: [...get().tasks, ...tasks] });
+    set({ tasks: [...get().tasks, ...tasks], isQueueVisible: true });
 
     await uploadService.enqueueUploads(connectionId, bucketName, targetPath, entries);
 
@@ -64,7 +67,8 @@ export const useUploadStore = create<UploadStoreState>((set, get) => ({
     await get().startTask(taskId);
   },
   clearCompleted() {
-    set({ tasks: get().tasks.filter((item) => item.status !== "completed") });
+    const remaining = get().tasks.filter((item) => item.status !== "completed");
+    set({ tasks: remaining, isQueueVisible: remaining.length > 0 });
   },
   pauseAll() {
     set({ isPaused: true, tasks: get().tasks.map((item) => ({ ...item, status: item.status === "uploading" ? "paused" : item.status })) });

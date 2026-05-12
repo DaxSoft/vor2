@@ -40,7 +40,7 @@ export function ConnectionSwitcher({ onAddConnection }: { onAddConnection: () =>
       <button
         type="button"
         aria-label="Connection switcher"
-        className="blue-focus flex w-full items-center justify-between rounded-xl border border-app-border bg-white/5 px-3 py-2 text-sm"
+        className="blue-focus flex w-full items-center justify-between rounded-xl border border-app-border bg-white/10 px-3 py-2 text-sm backdrop-blur-xl"
         onClick={() => setOpen((value) => !value)}
       >
         <span className="truncate">{active?.name ?? "Select connection"}</span>
@@ -48,12 +48,12 @@ export function ConnectionSwitcher({ onAddConnection }: { onAddConnection: () =>
       </button>
 
       {open ? (
-        <div className="glass-panel absolute z-30 mt-2 w-full rounded-xl border border-app-border p-2">
+        <div className="glass-panel absolute z-30 mt-2 w-full rounded-xl border border-app-border p-2 backdrop-blur-2xl">
           {items.map((item) => (
             <button
               key={item.id}
               type="button"
-              className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs hover:bg-accent-soft"
+              className="flex w-full items-center justify-between rounded-lg border border-white/5 bg-white/5 px-2 py-2 text-left text-xs backdrop-blur-xl hover:bg-accent-soft"
               onClick={() => {
                 setActiveConnection(item.id);
                 setOpen(false);
