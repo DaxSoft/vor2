@@ -6,6 +6,7 @@
   "main": "src/auth.ts",
   "types": "src/auth.ts",
   "dependencies": {
+    "@r2-explorer/database": "0.1.0",
     "@tauri-apps/api": "latest",
     "better-auth": "latest"
   }

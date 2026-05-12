@@ -1,16 +1,12 @@
 import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
+import { prisma } from "@r2-explorer/database/src/client";
 
-export interface BetterAuthEnvironment {
-  baseUrl: string;
-  authSecret: string;
-}
-
-export function createDesktopBetterAuth(env: BetterAuthEnvironment) {
-  return betterAuth({
-    baseURL: env.baseUrl,
-    secret: env.authSecret,
-    emailAndPassword: {
-      enabled: true
-    }
-  });
-}
+export const auth = betterAuth({
+  database: prismaAdapter(prisma as never, {
+    provider: "sqlite"
+  }),
+  emailAndPassword: {
+    enabled: true
+  }
+});

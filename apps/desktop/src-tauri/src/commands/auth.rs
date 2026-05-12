@@ -90,6 +90,13 @@ pub async fn sign_up_with_password(
                 params![user_id, normalized_username, password_hash, salt_hex],
             )
             .map_err(|err| err.to_string())?;
+
+        connection
+            .execute(
+                "INSERT INTO \"User\" (id, name, createdAt, updatedAt) VALUES (?1, ?2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                params![user_id, normalized_username],
+            )
+            .map_err(|err| err.to_string())?;
         Ok(())
     })?;
 
@@ -209,6 +216,8 @@ pub async fn delete_account(state: State<'_, AppState>) -> Result<(), String> {
         tx.execute("DELETE FROM app_settings WHERE user_id = ?1", params![user_id.clone()])
             .map_err(|err| err.to_string())?;
         tx.execute("DELETE FROM auth_users WHERE id = ?1", params![user_id.clone()])
+            .map_err(|err| err.to_string())?;
+        tx.execute("DELETE FROM \"User\" WHERE id = ?1", params![user_id.clone()])
             .map_err(|err| err.to_string())?;
 
         tx.commit().map_err(|err| err.to_string())

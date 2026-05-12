@@ -12,7 +12,8 @@ pub struct AppState {
 impl AppState {
     pub fn new(base_dir: PathBuf) -> Result<Self, String> {
         std::fs::create_dir_all(&base_dir).map_err(|err| err.to_string())?;
-        let db_path = base_dir.join("r2-explorer.db");
+        let db_path = base_dir.join("vor2.db");
+        migrate_legacy_database_if_needed(&base_dir, &db_path)?;
         init_database(&db_path)?;
         Ok(Self {
             db_path: Arc::new(db_path),
@@ -97,6 +98,16 @@ fn init_database(db_path: &PathBuf) -> Result<(), String> {
             password_salt TEXT NOT NULL,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
+
+        CREATE TABLE IF NOT EXISTS \"User\" (
+            id TEXT PRIMARY KEY,
+            email TEXT UNIQUE,
+            name TEXT,
+            image TEXT,
+            githubId TEXT UNIQUE,
+            createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
         ",
     )
     .map_err(|err| err.to_string())?;
@@ -126,6 +137,20 @@ fn init_database(db_path: &PathBuf) -> Result<(), String> {
         "TEXT NOT NULL DEFAULT ''",
     )?;
 
+    Ok(())
+}
+
+fn migrate_legacy_database_if_needed(base_dir: &PathBuf, current_db_path: &PathBuf) -> Result<(), String> {
+    if current_db_path.exists() {
+        return Ok(());
+    }
+
+    let legacy_path = base_dir.join("r2-explorer.db");
+    if !legacy_path.exists() {
+        return Ok(());
+    }
+
+    std::fs::copy(&legacy_path, current_db_path).map_err(|err| err.to_string())?;
     Ok(())
 }
 
