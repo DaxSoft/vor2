@@ -6,6 +6,7 @@
   "main": "src/auth.ts",
   "types": "src/auth.ts",
   "dependencies": {
+    "@tauri-apps/api": "latest",
     "better-auth": "latest"
   }
 }

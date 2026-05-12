@@ -13,17 +13,25 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
       const session = await authService.getSession();
       set({ session, isLocked: false, isLoading: false });
     } catch {
-      set({ session: null, isLoading: false, error: "GitHub sign-in failed. Try again or check your browser authorization window." });
+      set({ session: null, isLoading: false, error: "Sign-in failed." });
     }
   },
-  async signInWithGithub() {
+  async signInWithPassword(username, password) {
     set({ isLoading: true, error: null });
     try {
-      await authService.signInWithGithub();
-      const session = await authService.getSession();
+      const session = await authService.signInWithPassword(username, password);
       set({ session, isLoading: false, isLocked: false });
     } catch {
-      set({ isLoading: false, error: "GitHub sign-in failed. Try again or check your browser authorization window." });
+      set({ isLoading: false, error: "Invalid username or password." });
+    }
+  },
+  async signUpWithPassword(username, password) {
+    set({ isLoading: true, error: null });
+    try {
+      const session = await authService.signUpWithPassword(username, password);
+      set({ session, isLoading: false, isLocked: false });
+    } catch {
+      set({ isLoading: false, error: "Could not create account with those credentials." });
     }
   },
   async signOut() {

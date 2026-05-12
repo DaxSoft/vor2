@@ -1,44 +1,61 @@
+import { invoke } from "@tauri-apps/api/core";
 import type { AuthSession } from "./session";
+
+export interface AuthCredentials {
+  username: string;
+  password: string;
+}
 
 export interface AuthClient {
   getSession: () => Promise<AuthSession | null>;
-  signInWithGithub: () => Promise<void>;
+  signInWithPassword: (credentials: AuthCredentials) => Promise<AuthSession>;
+  signUpWithPassword: (credentials: AuthCredentials) => Promise<AuthSession>;
   signOut: () => Promise<void>;
 }
 
-export function createAuthClient(baseUrl: string): AuthClient {
+interface NativeAuthSessionResponse {
+  user: {
+    id: string;
+    username: string;
+  };
+  expiresAt: string;
+}
+
+function mapSession(value: NativeAuthSessionResponse): AuthSession {
+  return {
+    user: {
+      id: value.user.id,
+      username: value.user.username
+    },
+    expiresAt: value.expiresAt
+  };
+}
+
+export function createAuthClient(): AuthClient {
   return {
     async getSession() {
-      const response = await fetch(`${baseUrl}/api/auth/session`, { credentials: "include" });
-      if (!response.ok) {
-        return null;
-      }
-      const body = (await response.json()) as { session?: AuthSession };
-      return body.session ?? null;
+      const session = await invoke<NativeAuthSessionResponse | null>("get_session");
+      return session ? mapSession(session) : null;
     },
 
-    async signInWithGithub() {
-      const response = await fetch(`${baseUrl}/api/auth/sign-in/social`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: "github" }),
-        credentials: "include"
+    async signInWithPassword(credentials) {
+      const session = await invoke<NativeAuthSessionResponse>("sign_in_with_password", {
+        username: credentials.username,
+        password: credentials.password
       });
+      return mapSession(session);
+    },
 
-      if (!response.ok) {
-        throw new Error("GitHub sign-in failed.");
-      }
-
-      const data = (await response.json()) as { url?: string };
-      const oauthUrl = data.url;
-      if (!oauthUrl) {
-        throw new Error("GitHub sign-in failed.");
-      }
-      await import("@tauri-apps/plugin-opener").then(({ openUrl }) => openUrl(oauthUrl));
+    async signUpWithPassword(credentials) {
+      const session = await invoke<NativeAuthSessionResponse>("sign_up_with_password", {
+        username: credentials.username,
+        password: credentials.password
+      });
+      return mapSession(session);
     },
 
     async signOut() {
-      await fetch(`${baseUrl}/api/auth/sign-out`, { method: "POST", credentials: "include" });
+      await invoke("clear_session");
     }
   };
 }

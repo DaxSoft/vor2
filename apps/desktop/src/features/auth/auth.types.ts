@@ -6,7 +6,8 @@ export interface AuthStoreState {
   session: AuthSession | null;
   error: string | null;
   hydrate: () => Promise<void>;
-  signInWithGithub: () => Promise<void>;
+  signInWithPassword: (username: string, password: string) => Promise<void>;
+  signUpWithPassword: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   lock: () => void;
   unlock: () => void;

@@ -1,9 +1,6 @@
 export interface AuthSessionUser {
   id: string;
-  email?: string;
-  name?: string;
-  image?: string;
-  githubId?: string;
+  username: string;
 }
 
 export interface AuthSession {

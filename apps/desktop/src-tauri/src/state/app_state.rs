@@ -17,7 +17,7 @@ impl AppState {
         init_database(&db_path)?;
         Ok(Self {
             db_path: Arc::new(db_path),
-            user_id: Arc::new(Mutex::new(Some(String::from("local-user")))),
+            user_id: Arc::new(Mutex::new(None)),
             upload_paused: Arc::new(Mutex::new(false)),
         })
     }
@@ -85,6 +85,14 @@ fn init_database(db_path: &PathBuf) -> Result<(), String> {
             public_url TEXT,
             started_at TEXT,
             completed_at TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS auth_users (
+            id TEXT PRIMARY KEY,
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            password_salt TEXT NOT NULL,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
         ",
