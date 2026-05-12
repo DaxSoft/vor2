@@ -1,0 +1,12 @@
+{
+  "name": "@r2-explorer/r2",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/r2-service.ts",
+  "types": "src/r2-service.ts",
+  "dependencies": {
+    "@aws-sdk/client-s3": "latest",
+    "@aws-sdk/lib-storage": "latest"
+  }
+}

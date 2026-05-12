@@ -1,0 +1,11 @@
+{
+  "name": "@r2-explorer/auth",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/auth.ts",
+  "types": "src/auth.ts",
+  "dependencies": {
+    "better-auth": "latest"
+  }
+}

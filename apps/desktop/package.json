@@ -1,0 +1,51 @@
+{
+    "name":  "@r2-explorer/desktop",
+    "private":  true,
+    "version":  "0.1.0",
+    "type":  "module",
+    "scripts":  {
+                    "dev":  "vite --host --port 1420",
+                    "build":  "tsc --noEmit \u0026\u0026 vite build",
+                    "lint":  "eslint src --max-warnings=0",
+                    "typecheck":  "tsc --noEmit --pretty false",
+                    "preview":  "vite preview",
+                    "tauri:dev":  "tauri dev",
+                    "tauri:build":  "tauri build",
+                    "prisma:generate":  "prisma generate --schema prisma/schema.prisma",
+                    "prisma:migrate":  "prisma migrate dev --schema prisma/schema.prisma"
+                },
+    "dependencies":  {
+                         "@aws-sdk/client-s3":  "latest",
+                         "@aws-sdk/lib-storage":  "latest",
+                         "@prisma/client":  "^6.19.0",
+                         "@r2-explorer/auth":  "0.1.0",
+                         "@r2-explorer/crypto":  "0.1.0",
+                         "@r2-explorer/database":  "0.1.0",
+                         "@r2-explorer/r2":  "0.1.0",
+                         "@r2-explorer/ui":  "0.1.0",
+                         "@tauri-apps/api":  "latest",
+                         "@tauri-apps/plugin-dialog":  "latest",
+                         "@tauri-apps/plugin-opener":  "latest",
+                         "better-auth":  "latest",
+                         "clsx":  "latest",
+                         "lucide-react":  "latest",
+                         "motion":  "latest",
+                         "react":  "latest",
+                         "react-dom":  "latest",
+                         "tailwind-merge":  "latest",
+                         "zustand":  "latest"
+                     },
+    "devDependencies":  {
+                            "@tauri-apps/cli":  "latest",
+                            "@types/node":  "latest",
+                            "@types/react":  "latest",
+                            "@types/react-dom":  "latest",
+                            "@vitejs/plugin-react":  "latest",
+                            "autoprefixer":  "latest",
+                            "postcss":  "latest",
+                            "prisma":  "^6.19.0",
+                            "tailwindcss":  "^3.4.0",
+                            "typescript":  "latest",
+                            "vite":  "latest"
+                        }
+}

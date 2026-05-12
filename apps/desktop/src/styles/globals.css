@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --accent: #2488ff;
+  --accent-strong: #0f7bff;
+  --bg-root: rgba(5, 7, 13, 0.68);
+  --panel: rgba(12, 17, 27, 0.68);
+  --panel-strong: rgba(15, 21, 34, 0.86);
+  --panel-soft: rgba(255, 255, 255, 0.045);
+  --border: rgba(255, 255, 255, 0.105);
+  --border-blue: rgba(36, 136, 255, 0.42);
+  --text: #f5f8ff;
+  --text-muted: #aebbd1;
+  --text-soft: #8090aa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: Inter, "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  color: var(--text);
+  background: #05070d;
+}
+
+.app-background {
+  background:
+    radial-gradient(circle at 75% 15%, rgba(36, 136, 255, 0.28), transparent 38%),
+    radial-gradient(circle at 10% 90%, rgba(36, 136, 255, 0.18), transparent 32%),
+    linear-gradient(135deg, #05070d 0%, #0a101c 50%, #05070d 100%);
+}
+
+.glass-shell {
+  background: rgba(8, 12, 20, 0.72);
+  backdrop-filter: blur(34px) saturate(145%);
+  -webkit-backdrop-filter: blur(34px) saturate(145%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025)),
+    rgba(9, 14, 24, 0.68);
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  border: 1px solid var(--border);
+}
+
+.blue-focus:focus,
+.blue-focus:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1px rgba(36, 136, 255, 0.55),
+    0 0 22px rgba(36, 136, 255, 0.18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum ConnectionStatus {
+  ACTIVE
+  DISABLED
+  NEEDS_REAUTH
+  ERROR
+}
+
+enum UploadStatus {
+  QUEUED
+  UPLOADING
+  PAUSED
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+model User {
+  id              String         @id @default(cuid())
+  email           String?        @unique
+  name            String?
+  image           String?
+  githubId        String?        @unique
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  connections     R2Connection[]
+  settings        AppSettings?
+  uploads         UploadHistory[]
+}
+
+model R2Connection {
+  id                       String           @id @default(cuid())
+  userId                   String
+  name                     String
+  accountId                String?
+  bucketName               String
+  endpoint                 String
+  publicUrl                String?
+  region                   String           @default("auto")
+
+  encryptedAccessKeyId     String
+  encryptedSecretAccessKey String
+  encryptionIv             String
+  encryptionTag            String
+  encryptionVersion        Int              @default(1)
+
+  status                   ConnectionStatus @default(ACTIVE)
+  lastConnectedAt          DateTime?
+  lastSelectedPath         String            @default("/")
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+
+  user                     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  uploads                  UploadHistory[]
+
+  @@index([userId])
+  @@index([bucketName])
+}
+
+model AppSettings {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+
+  activeConnectionId    String?
+  startMinimizedToTray  Boolean  @default(true)
+  closeToTray           Boolean  @default(true)
+  launchAtStartup       Boolean  @default(false)
+  theme                 String   @default("dark")
+  accentColor           String   @default("#2488ff")
+  sidebarWidth          Int      @default(284)
+  detailsPanelVisible   Boolean  @default(true)
+  uploadPanelVisible    Boolean  @default(true)
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UploadHistory {
+  id              String       @id @default(cuid())
+  userId          String
+  connectionId    String
+  bucketName      String
+  sourcePath      String
+  objectKey       String
+  fileName        String
+  mimeType        String?
+  sizeBytes       BigInt
+  status          UploadStatus
+  progress        Int          @default(0)
+  errorMessage    String?
+  publicUrl       String?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime     @default(now())
+
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connection      R2Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([connectionId])
+  @@index([status])
+}
+
+model RecentPath {
+  id             String   @id @default(cuid())
+  userId         String
+  connectionId   String
+  bucketName     String
+  path           String
+  openedAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([connectionId])
+}
+
+model SecretAuditLog {
+  id             String   @id @default(cuid())
+  userId         String
+  connectionId   String?
+  action         String
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+  @@index([connectionId])
+}
