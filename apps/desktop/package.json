@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
+    "tauri:build:exe": "tauri build --bundles nsis",
     "test:desktop": "yarn typecheck && cargo check --manifest-path src-tauri/Cargo.toml"
   },
   "dependencies": {

@@ -13,6 +13,7 @@
     "dev:web": "yarn workspace @r2-explorer/desktop web:dev",
     "build": "turbo run build",
     "desktop:build": "yarn workspace @r2-explorer/desktop tauri:build",
+    "desktop:build:exe": "yarn workspace @r2-explorer/desktop tauri:build:exe",
     "desktop:test": "yarn workspace @r2-explorer/desktop test:desktop",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
