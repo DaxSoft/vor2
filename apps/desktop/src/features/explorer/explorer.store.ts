@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { explorerService } from "./explorer.service";
-import type { ExplorerStoreState } from "./explorer.types";
+import type { ExplorerStoreState, R2ExplorerNode } from "./explorer.types";
 
 function toErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "string" && error.trim()) {
@@ -39,6 +39,7 @@ export const useExplorerStore = create<ExplorerStoreState>((set, get) => ({
   sortBy: "name",
   sortDirection: "asc",
   viewMode: "table",
+  presignedByKey: {},
   async loadPath(path) {
     const state = get();
     if (!state.activeConnectionId) {
@@ -47,7 +48,24 @@ export const useExplorerStore = create<ExplorerStoreState>((set, get) => ({
     set({ isLoading: true, error: null, currentPath: path });
     try {
       const nodes = await explorerService.browse(state.activeConnectionId, state.bucketName, path, state.publicUrl);
-      set({ nodes, isLoading: false, selectedNodeId: null });
+      const now = Date.now();
+      const validPresigned = Object.fromEntries(
+        Object.entries(state.presignedByKey).filter(([, value]) => {
+          const expiresAt = new Date(value.expiresAt).getTime();
+          return Number.isFinite(expiresAt) && expiresAt > now;
+        })
+      );
+      const mapped = nodes.map((node): R2ExplorerNode => {
+        if (node.kind !== "file") {
+          return node;
+        }
+        const signed = validPresigned[node.key];
+        if (!signed) {
+          return { ...node, signedUrl: undefined, signedUrlExpiresAt: undefined };
+        }
+        return { ...node, signedUrl: signed.url, signedUrlExpiresAt: new Date(signed.expiresAt) };
+      });
+      set({ nodes: mapped, presignedByKey: validPresigned, isLoading: false, selectedNodeId: null });
     } catch (error) {
       set({
         isLoading: false,
@@ -120,6 +138,16 @@ export const useExplorerStore = create<ExplorerStoreState>((set, get) => ({
     set({ sortBy, sortDirection: direction });
   },
   setActiveConnection(connectionId, bucketName, publicUrl) {
-    set({ activeConnectionId: connectionId, bucketName, publicUrl });
+    set({ activeConnectionId: connectionId, bucketName, publicUrl, presignedByKey: {} });
+  },
+  setPresignedUrl(key, value) {
+    set((state) => ({
+      presignedByKey: { ...state.presignedByKey, [key]: value },
+      nodes: state.nodes.map((node) =>
+        node.kind === "file" && node.key === key
+          ? { ...node, signedUrl: value.url, signedUrlExpiresAt: new Date(value.expiresAt) }
+          : node
+      )
+    }));
   }
 }));

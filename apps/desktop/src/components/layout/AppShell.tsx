@@ -53,6 +53,7 @@ export function AppShell() {
 
   const activeConnection =
     connections.find((item) => item.id === activeConnectionId) ?? null;
+  const shouldShowQueue = isQueueVisible || uploadTasks.length > 0;
 
   useEffect(() => {
     if (!activeConnection) {
@@ -214,14 +215,16 @@ export function AppShell() {
               }}
             />
           ) : null}
-          <div className="flex min-h-0 flex-col gap-3">
+          <div
+            className={`grid min-h-0 gap-3 ${shouldShowQueue ? "grid-rows-[minmax(0,1fr)_auto]" : "grid-rows-[minmax(0,1fr)]"}`}
+          >
             <ExplorerView
               onUpload={() => {
                 void onUpload();
               }}
               onNewFolder={onNewFolder}
             />
-            {isQueueVisible || uploadTasks.length > 0 ? (
+            {shouldShowQueue ? (
               <UploadQueue
                 onPickFiles={() => {
                   void onUpload();

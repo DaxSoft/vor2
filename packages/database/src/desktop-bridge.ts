@@ -3,7 +3,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
-import { CopyObjectCommand, DeleteObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { CopyObjectCommand, DeleteObjectCommand, GetObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { prisma } from "./client";
 
 type Json = Record<string, unknown>;
@@ -450,7 +451,8 @@ async function run(action: string, payload: Json): Promise<unknown> {
     case "list_prefix_objects":
     case "rename_object":
     case "rename_prefix":
-    case "get_bucket_usage": {
+    case "get_bucket_usage":
+    case "create_presigned_get_url": {
       const userId = await currentUserId();
       const connectionId = String(payload.connectionId);
       const rows = await prisma.$queryRawUnsafe<
@@ -596,6 +598,22 @@ async function run(action: string, payload: Json): Promise<unknown> {
           totalSizeBytes,
           source: "scan"
         };
+      }
+
+      if (action === "create_presigned_get_url") {
+        const objectKey = String(payload.objectKey ?? "").replace(/^\/+/, "");
+        if (!objectKey.trim()) {
+          throw new Error("Object key is required.");
+        }
+        const ttlInput = Number(payload.ttlSeconds ?? 900);
+        const ttlSeconds = Number.isFinite(ttlInput) ? Math.max(60, Math.min(7 * 24 * 60 * 60, Math.floor(ttlInput))) : 900;
+        const command = new GetObjectCommand({
+          Bucket: String(payload.bucketName),
+          Key: objectKey
+        });
+        const url = await getSignedUrl(client, command, { expiresIn: ttlSeconds });
+        const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
+        return { url, ttlSeconds, expiresAt };
       }
 
       const pathValue = String(payload.path ?? "").replace(/^\/+|\/+$/g, "");

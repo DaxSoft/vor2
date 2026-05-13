@@ -80,6 +80,7 @@ pub fn run() {
             commands::backend::rename_object,
             commands::backend::rename_prefix,
             commands::backend::get_bucket_usage,
+            commands::backend::create_presigned_get_url,
             commands::backend::enqueue_uploads
         ])
         .run(tauri::generate_context!())

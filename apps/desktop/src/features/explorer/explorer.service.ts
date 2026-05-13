@@ -15,6 +15,12 @@ interface ExplorerListingResult {
   }>;
 }
 
+interface PresignedUrlResult {
+  url: string;
+  ttlSeconds: number;
+  expiresAt: string;
+}
+
 export const explorerService = {
   async browse(connectionId: string, bucketName: string, path: string, publicUrl?: string): Promise<R2ExplorerNode[]> {
     const result = await invoke<ExplorerListingResult>("browse_folder", {
@@ -74,6 +80,20 @@ export const explorerService = {
       bucketName,
       oldPrefix,
       newPrefix
+    });
+  },
+
+  async createPresignedGetUrl(
+    connectionId: string,
+    bucketName: string,
+    objectKey: string,
+    ttlSeconds = 900
+  ): Promise<PresignedUrlResult> {
+    return invoke<PresignedUrlResult>("create_presigned_get_url", {
+      connectionId,
+      bucketName,
+      objectKey,
+      ttlSeconds
     });
   }
 };

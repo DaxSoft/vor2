@@ -1,17 +1,42 @@
 import { useState } from "react";
-import { Copy, Download, Share2, Trash2 } from "lucide-react";
+import { Copy, Download, Share2, TimerReset, Trash2 } from "lucide-react";
 import { formatBytes, formatDate } from "@/lib/format";
 import type { R2FileNode } from "./explorer.types";
 
 export function DetailsPanel({
   node,
   onDelete,
+  onDownload,
+  onCreateExpiringLink,
 }: {
   node: R2FileNode;
   onDelete: (key: string) => Promise<void>;
+  onDownload: (key: string) => Promise<void>;
+  onCreateExpiringLink: (key: string) => Promise<void>;
 }) {
   const [message, setMessage] = useState<string | null>(null);
+  const previewUrl = node.signedUrl ?? node.publicUrl;
   const extension = node.name.split(".").pop()?.toLowerCase() ?? "";
+  const signedTtl = (() => {
+    if (!node.signedUrlExpiresAt) {
+      return "-";
+    }
+    const seconds = Math.floor((node.signedUrlExpiresAt.getTime() - Date.now()) / 1000);
+    if (seconds <= 0) {
+      return "expired";
+    }
+    if (seconds < 60) {
+      return `${seconds}s`;
+    }
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    if (minutes < 60) {
+      return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const minutesLeft = minutes % 60;
+    return minutesLeft > 0 ? `${hours}h ${minutesLeft}m` : `${hours}h`;
+  })();
   const mime = (node.mimeType ?? "").toLowerCase();
   const isImage =
     mime.startsWith("image/") ||
@@ -33,25 +58,36 @@ export function DetailsPanel({
   };
 
   const shareUrl = async () => {
-    if (!node.publicUrl) {
-      setMessage("No public URL configured for this connection.");
+    const url = node.signedUrl ?? node.publicUrl;
+    if (!url) {
+      setMessage("No URL available yet. Create an expiring link first.");
       return;
     }
     if (navigator.share) {
-      await navigator.share({ title: node.name, url: node.publicUrl });
+      await navigator.share({ title: node.name, url });
       setMessage("Share dialog opened.");
       return;
     }
-    await navigator.clipboard.writeText(node.publicUrl);
+    await navigator.clipboard.writeText(url);
     setMessage("Share not supported. URL copied instead.");
   };
 
-  const download = () => {
-    if (!node.publicUrl) {
-      setMessage("No public URL configured for this connection.");
+  const copyEtag = async () => {
+    if (!node.etag) {
       return;
     }
-    window.open(node.publicUrl, "_blank", "noopener,noreferrer");
+    await navigator.clipboard.writeText(node.etag);
+    setMessage("ETag copied.");
+  };
+
+  const createExpiringLink = async () => {
+    await onCreateExpiringLink(node.key);
+    setMessage("New expiring link created.");
+  };
+
+  const download = async () => {
+    await onDownload(node.key);
+    setMessage("Download started.");
   };
 
   const remove = async () => {
@@ -65,22 +101,22 @@ export function DetailsPanel({
         <h3 className="text-sm font-semibold text-app-text">Details</h3>
       </div>
 
-      {node.publicUrl && (isImage || isAudio || isVideo) ? (
+      {previewUrl && (isImage || isAudio || isVideo) ? (
         <div className="mb-3 rounded-lg border border-app-border/20 bg-black/20 p-2">
           {isImage ? (
             <img
-              src={node.publicUrl}
+              src={previewUrl}
               alt={node.name}
               className="max-h-40 w-full rounded object-cover"
             />
           ) : null}
           {isAudio ? (
-            <audio controls src={node.publicUrl} className="w-full" />
+            <audio controls src={previewUrl} className="w-full" />
           ) : null}
           {isVideo ? (
             <video
               controls
-              src={node.publicUrl}
+              src={previewUrl}
               className="max-h-48 w-full rounded"
             />
           ) : null}
@@ -93,15 +129,23 @@ export function DetailsPanel({
         </p>
         <span
           className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${
-            node.isPublic
+            node.signedUrl
+              ? "border-sky-400/30 bg-sky-500/15 text-sky-200"
+              : node.isPublic
               ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-300"
               : "border-slate-500/30 bg-slate-500/15 text-slate-300"
           }`}
         >
           <span
-            className={`h-1.5 w-1.5 rounded-full ${node.isPublic ? "bg-emerald-400" : "bg-slate-400"}`}
+            className={`h-1.5 w-1.5 rounded-full ${
+              node.signedUrl
+                ? "bg-sky-400"
+                : node.isPublic
+                  ? "bg-emerald-400"
+                  : "bg-slate-400"
+            }`}
           />
-          {node.isPublic ? "Public" : "Private"}
+          {node.signedUrl ? "Signed URL Active" : node.isPublic ? "Public" : "Private"}
         </span>
       </div>
 
@@ -126,9 +170,14 @@ export function DetailsPanel({
         </div>
         <div className="flex items-center justify-between gap-2">
           <span>ETag</span>
-          <span className="max-w-[150px] truncate text-right text-app-text">
+          <button
+            type="button"
+            onClick={() => void copyEtag()}
+            className="max-w-[150px] truncate text-right text-app-text underline-offset-2 hover:underline"
+            title={node.etag ?? "-"}
+          >
             {node.etag ?? "-"}
-          </span>
+          </button>
         </div>
         <div className="flex items-center justify-between gap-2">
           <span>Storage Class</span>
@@ -144,6 +193,16 @@ export function DetailsPanel({
         </p>
         <p className="truncate text-[11px] text-accent">
           {node.publicUrl ?? "No public URL configured"}
+        </p>
+      </div>
+
+      <div className="mt-3">
+        <p className="mb-1 text-[11px] font-semibold text-app-muted">Expiring URL</p>
+        <p className="truncate text-[11px] text-sky-300">
+          {node.signedUrl ?? "Not generated"}
+        </p>
+        <p className="mt-1 text-[11px] text-app-soft">
+          TTL: {signedTtl}
         </p>
       </div>
 
@@ -164,6 +223,14 @@ export function DetailsPanel({
           <Share2 className="mr-1 inline h-3 w-3" />
           Share
         </button>
+        <button
+          type="button"
+          className="col-span-2 rounded-lg border border-sky-400/30 bg-sky-500/10 px-2 py-1.5 text-left text-sky-100"
+          onClick={() => void createExpiringLink()}
+        >
+          <TimerReset className="mr-1 inline h-3 w-3" />
+          Create Expiring Link
+        </button>
       </div>
 
       <div className="mt-3 border-t border-app-border/20 pt-3">
@@ -171,7 +238,7 @@ export function DetailsPanel({
         <button
           type="button"
           className="mb-2 flex w-full items-center gap-2 rounded-lg border border-app-border/20 bg-white/[0.05] px-2 py-2 text-left"
-          onClick={download}
+          onClick={() => void download()}
         >
           <Download className="h-3.5 w-3.5" />
           Download

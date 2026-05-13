@@ -1,7 +1,29 @@
 import { File, Folder } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { MouseEvent } from "react";
 import { formatBytes, formatDate } from "@/lib/format";
 import type { R2ExplorerNode } from "./explorer.types";
+
+function formatSignedTtl(expiresAt: Date | undefined, nowMs: number): string {
+  if (!expiresAt) {
+    return "";
+  }
+  const seconds = Math.floor((expiresAt.getTime() - nowMs) / 1000);
+  if (seconds <= 0) {
+    return "expired";
+  }
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  if (minutes < 60) {
+    return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const minutesLeft = minutes % 60;
+  return minutesLeft > 0 ? `${hours}h ${minutesLeft}m` : `${hours}h`;
+}
 
 export function ExplorerTable({
   nodes,
@@ -16,6 +38,15 @@ export function ExplorerTable({
   onOpen: (id: string) => void;
   onContextMenu: (event: MouseEvent, node: R2ExplorerNode) => void;
 }) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   return (
     <table className="w-full table-fixed text-left text-[13px]">
       <thead>
@@ -65,9 +96,19 @@ export function ExplorerTable({
               {node.kind === "file" ? (
                 <span className="inline-flex items-center gap-1.5">
                   <span
-                    className={`h-1.5 w-1.5 rounded-full ${node.isPublic ? "bg-emerald-400" : "bg-slate-500"}`}
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      node.signedUrl
+                        ? "bg-sky-400"
+                        : node.isPublic
+                          ? "bg-emerald-400"
+                          : "bg-slate-500"
+                    }`}
                   />
-                  {node.isPublic ? "Public" : "Private"}
+                  {node.signedUrl
+                    ? `Signed (${formatSignedTtl(node.signedUrlExpiresAt, now)})`
+                    : node.isPublic
+                      ? "Public"
+                      : "Private"}
                 </span>
               ) : (
                 "-"

@@ -100,6 +100,14 @@ pub struct BucketUsageDto {
     pub source: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PresignedUrlDto {
+    pub url: String,
+    pub ttl_seconds: u64,
+    pub expires_at: String,
+}
+
 fn workspace_root() -> Result<PathBuf, String> {
     let here = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     Ok(here.join("..").join("..").join(".."))
@@ -443,6 +451,24 @@ pub async fn get_bucket_usage(
         serde_json::json!({
             "connectionId": connection_id,
             "bucketName": bucket_name
+        }),
+    )
+}
+
+#[tauri::command]
+pub async fn create_presigned_get_url(
+    connection_id: String,
+    bucket_name: String,
+    object_key: String,
+    ttl_seconds: Option<u64>,
+) -> Result<PresignedUrlDto, String> {
+    run_bridge(
+        "create_presigned_get_url",
+        serde_json::json!({
+            "connectionId": connection_id,
+            "bucketName": bucket_name,
+            "objectKey": object_key,
+            "ttlSeconds": ttl_seconds
         }),
     )
 }

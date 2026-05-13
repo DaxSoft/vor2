@@ -4,12 +4,14 @@ import {
   Copy,
   Download,
   FolderPlus,
+  Link2,
   PencilLine,
   RefreshCw,
   Share2,
   Trash2,
   UploadCloud,
 } from "lucide-react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { buildPublicUrl } from "@r2-explorer/r2/src/path-utils";
 import { Breadcrumb } from "./Breadcrumb";
 import { DetailsPanel } from "./DetailsPanel";
@@ -49,6 +51,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
   const selectNode = useExplorerStore((state) => state.selectNode);
   const renameNode = useExplorerStore((state) => state.renameNode);
   const goParent = useExplorerStore((state) => state.goParent);
+  const setPresignedUrl = useExplorerStore((state) => state.setPresignedUrl);
   const activeConnectionId = useConnectionStore(
     (state) => state.activeConnectionId,
   );
@@ -101,16 +104,35 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
     setMessage("URL copied.");
   };
 
+  const createExpiringLink = async (node: R2ExplorerNode) => {
+    if (!activeConnectionId || !activeConnection || node.kind !== "file") {
+      return;
+    }
+    const signed = await explorerService.createPresignedGetUrl(
+      activeConnectionId,
+      activeConnection.bucketName,
+      node.key,
+      900,
+    );
+    setPresignedUrl(node.key, signed);
+    await navigator.clipboard.writeText(signed.url);
+    setMessage("Expiring link created and copied.");
+  };
+
   const shareNode = async (node: R2ExplorerNode) => {
-    if (node.kind !== "file" || !node.publicUrl) {
-      setMessage("No public URL configured for this file.");
+    if (node.kind !== "file") {
+      return;
+    }
+    const url = node.signedUrl ?? node.publicUrl;
+    if (!url) {
+      setMessage("No URL available. Create an expiring link first.");
       return;
     }
     if (navigator.share) {
-      await navigator.share({ title: node.name, url: node.publicUrl });
+      await navigator.share({ title: node.name, url });
       return;
     }
-    await navigator.clipboard.writeText(node.publicUrl);
+    await navigator.clipboard.writeText(url);
     setMessage("Share not supported. URL copied.");
   };
 
@@ -120,34 +142,48 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
     }
 
     if (node.kind === "file") {
-      if (!node.publicUrl) {
-        setMessage("No public URL configured for this file.");
-        return;
+      let downloadUrl = node.signedUrl ?? node.publicUrl;
+      if (!downloadUrl) {
+        const signed = await explorerService.createPresignedGetUrl(
+          activeConnectionId,
+          activeConnection.bucketName,
+          node.key,
+          900,
+        );
+        setPresignedUrl(node.key, signed);
+        downloadUrl = signed.url;
       }
-      window.open(node.publicUrl, "_blank", "noopener,noreferrer");
+      await openUrl(downloadUrl);
+      setMessage("Download started.");
       return;
     }
 
-    if (!activeConnection.publicUrl) {
-      setMessage("No public URL configured for this connection.");
-      return;
-    }
     const keys = await explorerService.listPrefixObjects(
       activeConnectionId,
       activeConnection.bucketName,
       node.key,
     );
     for (const key of keys) {
-      const url = buildPublicUrl(activeConnection.publicUrl, key);
-      if (!url) {
-        continue;
+      let url: string | undefined;
+      if (activeConnection.publicUrl) {
+        url = buildPublicUrl(activeConnection.publicUrl, key) ?? undefined;
       }
-      window.open(url, "_blank", "noopener,noreferrer");
+      if (!url) {
+        const signed = await explorerService.createPresignedGetUrl(
+          activeConnectionId,
+          activeConnection.bucketName,
+          key,
+          900,
+        );
+        setPresignedUrl(key, signed);
+        url = signed.url;
+      }
+      await openUrl(url);
     }
     setMessage(
       keys.length === 0
         ? "Folder is empty."
-        : `Opened ${keys.length} file download(s).`,
+        : `Download started for ${keys.length} file(s).`,
     );
   };
 
@@ -270,8 +306,14 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
         {selectedFile ? (
           <DetailsPanel
             node={selectedFile}
-            onDelete={async () => {
+            onDelete={async (_key) => {
               setConfirmDelete(selectedFile);
+            }}
+            onDownload={async () => {
+              await downloadNode(selectedFile);
+            }}
+            onCreateExpiringLink={async () => {
+              await createExpiringLink(selectedFile);
             }}
           />
         ) : (
@@ -309,6 +351,13 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
               >
                 <Download className="h-3.5 w-3.5 text-app-muted" />
                 Download
+              </button>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+                onClick={() => runNodeAction(createExpiringLink)}
+              >
+                <Link2 className="h-3.5 w-3.5 text-app-muted" />
+                Create Expiring Link
               </button>
               <button
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
