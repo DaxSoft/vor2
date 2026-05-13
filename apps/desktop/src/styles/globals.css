@@ -36,9 +36,9 @@ body {
 
 .app-background {
   background:
-    radial-gradient(circle at 80% 0%, rgba(36, 136, 255, 0.18), transparent 45%),
-    radial-gradient(circle at 10% 100%, rgba(36, 136, 255, 0.12), transparent 42%),
-    rgba(6, 9, 16, 0.18);
+    radial-gradient(circle at 78% 2%, rgba(36, 136, 255, 0.1), transparent 48%),
+    radial-gradient(circle at 12% 100%, rgba(36, 136, 255, 0.08), transparent 45%),
+    rgba(6, 9, 16, 0.12);
 }
 
 .glass-shell {
@@ -58,6 +58,52 @@ body {
   backdrop-filter: blur(44px) saturate(148%);
   -webkit-backdrop-filter: blur(44px) saturate(148%);
   border: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+[data-theme="light"] .app-background {
+  background:
+    radial-gradient(circle at 78% 2%, rgba(76, 149, 255, 0.14), transparent 50%),
+    radial-gradient(circle at 12% 100%, rgba(120, 180, 255, 0.08), transparent 48%),
+    linear-gradient(180deg, rgba(242, 247, 255, 0.96), rgba(235, 242, 252, 0.94));
+}
+
+[data-theme="light"] .glass-shell {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(30, 74, 136, 0.12);
+  box-shadow:
+    0 18px 56px rgba(25, 52, 95, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+[data-theme="light"] .glass-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.56)),
+    rgba(229, 238, 251, 0.6);
+  border: 1px solid rgba(30, 74, 136, 0.12);
+}
+
+[data-theme="light"] .text-app-text {
+  color: #11243e !important;
+}
+
+[data-theme="light"] .text-app-muted,
+[data-theme="light"] .text-app-soft {
+  color: #4d6486 !important;
+}
+
+[data-theme="light"] .bg-accent-soft {
+  background-color: rgba(36, 136, 255, 0.12) !important;
+}
+
+[data-theme="light"] .border-app-border\/20,
+[data-theme="light"] .border-app-border\/35,
+[data-theme="light"] .border-app-border\/45 {
+  border-color: rgba(30, 74, 136, 0.12) !important;
+}
+
+[data-theme="light"] .hover\:bg-white\/5:hover,
+[data-theme="light"] .hover\:bg-white\/10:hover {
+  background-color: rgba(29, 78, 156, 0.08) !important;
 }
 
 * {

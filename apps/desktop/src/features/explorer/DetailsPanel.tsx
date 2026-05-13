@@ -57,6 +57,15 @@ export function DetailsPanel({
     setMessage("Public URL copied.");
   };
 
+  const copyExpiringUrl = async () => {
+    if (!node.signedUrl) {
+      setMessage("No expiring URL generated yet.");
+      return;
+    }
+    await navigator.clipboard.writeText(node.signedUrl);
+    setMessage("Expiring URL copied.");
+  };
+
   const shareUrl = async () => {
     const url = node.signedUrl ?? node.publicUrl;
     if (!url) {
@@ -222,6 +231,14 @@ export function DetailsPanel({
         >
           <Share2 className="mr-1 inline h-3 w-3" />
           Share
+        </button>
+        <button
+          type="button"
+          className="col-span-2 rounded-lg border border-sky-400/30 bg-sky-500/10 px-2 py-1.5 text-left text-sky-100"
+          onClick={() => void copyExpiringUrl()}
+        >
+          <Copy className="mr-1 inline h-3 w-3" />
+          Copy Expiring URL
         </button>
         <button
           type="button"

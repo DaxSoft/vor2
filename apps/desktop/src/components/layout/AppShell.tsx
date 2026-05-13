@@ -15,6 +15,7 @@ import { bindTrayEvents } from "@/features/tray/tray.events";
 import {
   closeToTray,
   minimizeWindow,
+  startDraggingWindow,
   toggleMaximizeWindow,
 } from "@/lib/desktop-window";
 
@@ -50,6 +51,10 @@ export function AppShell() {
   const [showAbout, setShowAbout] = useState(false);
   const [showConnectionForm, setShowConnectionForm] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    const stored = window.localStorage.getItem("vor2-theme");
+    return stored === "light" ? "light" : "dark";
+  });
 
   const activeConnection =
     connections.find((item) => item.id === activeConnectionId) ?? null;
@@ -162,11 +167,12 @@ export function AppShell() {
     [createFolder, folderName],
   );
 
+  useEffect(() => {
+    window.localStorage.setItem("vor2-theme", theme);
+  }, [theme]);
+
   return (
-    <div
-      data-tauri-drag-region
-      className="h-screen w-screen overflow-hidden text-[#f5f8ff] app-background"
-    >
+    <div data-theme={theme} className="h-screen w-screen overflow-hidden text-app-text app-background">
       <div className="mx-4 my-4 flex h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-app glass-shell">
         <TitleBar
           search={search}
@@ -191,6 +197,10 @@ export function AppShell() {
             setSidebarVisible((value) => !value);
           }}
           sidebarVisible={sidebarVisible}
+          theme={theme}
+          onToggleTheme={() => {
+            setTheme((value) => (value === "dark" ? "light" : "dark"));
+          }}
           onMinimize={() => {
             void minimizeWindow();
           }}
@@ -199,6 +209,9 @@ export function AppShell() {
           }}
           onClose={() => {
             void closeToTray();
+          }}
+          onStartDragging={() => {
+            void startDraggingWindow();
           }}
         />
 
@@ -216,7 +229,7 @@ export function AppShell() {
             />
           ) : null}
           <div
-            className={`grid min-h-0 gap-3 ${shouldShowQueue ? "grid-rows-[minmax(0,1fr)_auto]" : "grid-rows-[minmax(0,1fr)]"}`}
+            className={`grid min-h-0 gap-3 overflow-hidden ${shouldShowQueue ? "grid-rows-[minmax(0,1fr)_minmax(190px,34%)]" : "grid-rows-[minmax(0,1fr)]"}`}
           >
             <ExplorerView
               onUpload={() => {

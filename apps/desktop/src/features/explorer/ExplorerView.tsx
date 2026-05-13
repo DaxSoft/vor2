@@ -104,6 +104,18 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
     setMessage("URL copied.");
   };
 
+  const copyExpiringUrl = async (node: R2ExplorerNode) => {
+    if (node.kind !== "file") {
+      return;
+    }
+    if (node.signedUrl) {
+      await navigator.clipboard.writeText(node.signedUrl);
+      setMessage("Expiring URL copied.");
+      return;
+    }
+    await createExpiringLink(node);
+  };
+
   const createExpiringLink = async (node: R2ExplorerNode) => {
     if (!activeConnectionId || !activeConnection || node.kind !== "file") {
       return;
@@ -242,7 +254,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
   };
 
   return (
-    <div className="grid min-h-0 flex-1 gap-3 grid-cols-[1fr_320px]">
+    <div className="grid h-full min-h-0 gap-3 grid-cols-[1fr_320px]">
       <section
         className="glass-panel flex min-h-0 flex-col rounded-panel border border-app-border/20 p-3"
         onContextMenu={(event) => {
@@ -358,6 +370,13 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
               >
                 <Link2 className="h-3.5 w-3.5 text-app-muted" />
                 Create Expiring Link
+              </button>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+                onClick={() => runNodeAction(copyExpiringUrl)}
+              >
+                <Copy className="h-3.5 w-3.5 text-app-muted" />
+                Copy Expiring URL
               </button>
               <button
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"

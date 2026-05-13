@@ -2,12 +2,14 @@ import {
   FolderPlus,
   Info,
   Minus,
+  Moon,
   MoreHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
   RefreshCw,
   Search,
   Square,
+  Sun,
   UploadCloud,
   X,
 } from "lucide-react";
@@ -23,9 +25,12 @@ export function TitleBar({
   onOpenSettings,
   onToggleSidebar,
   sidebarVisible,
+  theme,
+  onToggleTheme,
   onMinimize,
   onToggleMaximize,
   onClose,
+  onStartDragging,
 }: {
   search: string;
   onSearch: (value: string) => void;
@@ -36,15 +41,31 @@ export function TitleBar({
   onOpenSettings: () => void;
   onToggleSidebar: () => void;
   sidebarVisible: boolean;
+  theme: "dark" | "light";
+  onToggleTheme: () => void;
   onMinimize: () => void;
   onToggleMaximize: () => void;
   onClose: () => void;
+  onStartDragging: () => void;
 }) {
   return (
-    <header className="flex items-center gap-3 border-b border-app-border/20 px-4 py-3">
-      <div className="flex items-center gap-2">
+    <header
+      data-tauri-drag-region
+      className="flex items-center gap-3 border-b border-app-border/20 px-4 py-3"
+      onMouseDown={(event) => {
+        if (event.button !== 0) {
+          return;
+        }
+        const target = event.target as HTMLElement;
+        if (target.closest("[data-no-drag='true']")) {
+          return;
+        }
+        onStartDragging();
+      }}
+    >
+      <div data-tauri-drag-region className="flex items-center gap-2">
         <img src={logoMark} alt="vor2" className="h-4 w-4" />
-        <span className="text-sm font-semibold text-app-text">vor2</span>
+        <span data-tauri-drag-region className="text-sm font-semibold text-app-text">vor2</span>
       </div>
 
       <label
@@ -132,6 +153,15 @@ export function TitleBar({
           onClick={onOpenSettings}
         >
           <MoreHorizontal className="h-3.5 w-3.5" />
+        </button>
+        <button
+          data-no-drag="true"
+          type="button"
+          aria-label="Toggle theme"
+          className="rounded-lg border border-app-border/20 bg-white/[0.04] px-2 py-1.5 text-xs"
+          onClick={onToggleTheme}
+        >
+          {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
         </button>
       </div>
 

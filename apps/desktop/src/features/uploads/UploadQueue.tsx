@@ -21,7 +21,7 @@ export function UploadQueue({
     : "/";
 
   return (
-    <section className="glass-panel rounded-panel border border-app-border/20 p-3">
+    <section className="glass-panel flex h-full min-h-0 flex-col rounded-panel border border-app-border/20 p-3">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-app-text">
           Upload Queue ({tasks.length})
@@ -50,7 +50,7 @@ export function UploadQueue({
         targetPath={currentPath}
       />
 
-      <div className="mt-3 space-y-2">
+      <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-auto pr-1">
         {tasks.length === 0 ? (
           <p className="text-xs text-app-soft">No uploads yet.</p>
         ) : null}
