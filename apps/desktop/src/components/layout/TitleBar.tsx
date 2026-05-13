@@ -1,4 +1,4 @@
-import { FolderPlus, Minus, MoreHorizontal, PanelLeftClose, PanelLeftOpen, RefreshCw, Search, Square, UploadCloud, X } from "lucide-react";
+import { FolderPlus, Info, Minus, MoreHorizontal, PanelLeftClose, PanelLeftOpen, RefreshCw, Search, Square, UploadCloud, X } from "lucide-react";
 import logoMark from "@/assets/logo-mark.svg";
 
 export function TitleBar({
@@ -6,6 +6,7 @@ export function TitleBar({
   onSearch,
   onNewFolder,
   onUpload,
+  onOpenAbout,
   onRefresh,
   onOpenSettings,
   onToggleSidebar,
@@ -19,6 +20,7 @@ export function TitleBar({
   onSearch: (value: string) => void;
   onNewFolder: () => void;
   onUpload: () => void;
+  onOpenAbout: () => void;
   onRefresh: () => void;
   onOpenSettings: () => void;
   onToggleSidebar: () => void;
@@ -42,7 +44,7 @@ export function TitleBar({
         onStartDragging();
       }}
     >
-      <div className="flex items-center gap-2" data-no-drag="true">
+      <div className="flex items-center gap-2 cursor-grab active:cursor-grabbing">
         <img src={logoMark} alt="vor2" className="h-4 w-4" />
         <span className="text-sm font-semibold text-app-text">vor2</span>
       </div>
@@ -67,6 +69,10 @@ export function TitleBar({
         <button data-no-drag="true" type="button" aria-label="Upload" className="rounded-lg border border-app-border bg-white/5 px-2 py-1.5 text-xs" onClick={onUpload}>
           <UploadCloud className="mr-1 inline h-3.5 w-3.5" />
           Upload
+        </button>
+        <button data-no-drag="true" type="button" aria-label="About" className="rounded-lg border border-app-border bg-white/5 px-2 py-1.5 text-xs" onClick={onOpenAbout}>
+          <Info className="mr-1 inline h-3.5 w-3.5" />
+          About
         </button>
         <button data-no-drag="true" type="button" aria-label="Refresh" className="rounded-lg border border-app-border bg-white/5 px-2 py-1.5 text-xs" onClick={onRefresh}>
           <RefreshCw className="h-3.5 w-3.5" />

@@ -21,7 +21,6 @@ export function ExplorerTable({
       <thead>
         <tr className="border-b border-app-border text-xs font-semibold text-app-muted">
           <th className="px-3 py-2">Name</th>
-          <th className="px-3 py-2">Type</th>
           <th className="px-3 py-2">Size</th>
           <th className="px-3 py-2">Modified</th>
           <th className="px-3 py-2">Status</th>
@@ -41,12 +40,15 @@ export function ExplorerTable({
             onContextMenu={(event) => onContextMenu(event, node)}
           >
             <td className="px-3 py-2">
-              <div className="flex items-center gap-2">
-                {node.kind === "folder" ? <Folder className="h-4 w-4 text-accent" /> : <File className="h-4 w-4 text-accent" />}
+              <div className="flex min-w-0 items-center gap-2">
+                {node.kind === "folder" ? (
+                  <Folder className="h-4 w-4 shrink-0 text-accent" />
+                ) : (
+                  <File className="h-4 w-4 shrink-0 text-accent" />
+                )}
                 <span className="truncate">{node.name}</span>
               </div>
             </td>
-            <td className="px-3 py-2 text-app-muted">{node.kind === "folder" ? "Folder" : node.mimeType ?? "File"}</td>
             <td className="px-3 py-2 text-app-muted">
               {node.kind === "file" ? formatBytes(node.sizeBytes) : formatBytes(node.totalSizeBytes ?? 0)}
             </td>

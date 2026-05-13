@@ -10,6 +10,7 @@ import { useExplorerStore } from "@/features/explorer/explorer.store";
 import { useConnectionStore } from "@/features/connections/connection.store";
 import { useUploadStore } from "@/features/uploads/upload.store";
 import { SettingsView } from "@/features/settings/SettingsView";
+import { AboutView } from "@/features/settings/AboutView";
 import { bindTrayEvents } from "@/features/tray/tray.events";
 import { closeToTray, minimizeWindow, startDraggingWindow, toggleMaximizeWindow } from "@/lib/desktop-window";
 
@@ -38,6 +39,7 @@ export function AppShell() {
   const [search, setSearch] = useState("");
   const [folderName, setFolderName] = useState("New folder");
   const [showSettings, setShowSettings] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [showConnectionForm, setShowConnectionForm] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(false);
 
@@ -136,6 +138,9 @@ export function AppShell() {
           onUpload={() => {
             void onUpload();
           }}
+          onOpenAbout={() => {
+            setShowAbout(true);
+          }}
           onRefresh={() => {
             void refresh();
           }}
@@ -203,6 +208,16 @@ export function AppShell() {
           <SettingsView
             onClose={() => {
               setShowSettings(false);
+            }}
+          />
+        </div>
+      ) : null}
+
+      {showAbout ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/45 p-4">
+          <AboutView
+            onClose={() => {
+              setShowAbout(false);
             }}
           />
         </div>

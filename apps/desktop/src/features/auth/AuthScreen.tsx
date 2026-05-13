@@ -84,9 +84,16 @@ export function AuthScreen() {
           </button>
         </div>
 
-        <p className="mt-4 text-xs text-app-soft">
-          Your R2 credentials are encrypted locally and unlocked only after sign-in.
-        </p>
+        <div className="mt-4 space-y-1 text-xs text-app-soft">
+          <p>
+            <span className="font-semibold text-white">Important:</span> all data is stored in a{" "}
+            <span className="font-semibold text-accent">local SQLite database</span>.
+          </p>
+          <p>
+            Your credentials stay on your machine and are{" "}
+            <span className="font-semibold text-white">never stored online by us</span>.
+          </p>
+        </div>
 
         {error ? <p className="mt-3 text-xs text-rose-300">{error}</p> : null}
       </div>
