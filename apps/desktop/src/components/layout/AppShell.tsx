@@ -265,7 +265,7 @@ export function AppShell() {
       </div>
 
       {showSettings ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/45 p-4">
+        <div className="overlay-backdrop fixed inset-0 z-40 flex items-center justify-center p-4">
           <SettingsView
             onClose={() => {
               setShowSettings(false);
@@ -275,7 +275,7 @@ export function AppShell() {
       ) : null}
 
       {showAbout ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/45 p-4">
+        <div className="overlay-backdrop fixed inset-0 z-40 flex items-center justify-center p-4">
           <AboutView
             onClose={() => {
               setShowAbout(false);
@@ -285,7 +285,7 @@ export function AppShell() {
       ) : null}
 
       {showConnectionForm ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/45 p-4">
+        <div className="overlay-backdrop fixed inset-0 z-40 flex items-center justify-center p-4">
           <div className="glass-shell w-full max-w-xl rounded-app p-6">
             <ConnectionForm
               onCreated={() => {

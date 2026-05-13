@@ -38,6 +38,8 @@ interface BackgroundContextMenuState {
   y: number;
 }
 
+const TTL_PRESETS_MINUTES = [1, 5, 15, 30, 60, 720, 1440];
+
 export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
   const nodes = useExplorerStore((state) => state.nodes);
   const currentPath = useExplorerStore((state) => state.currentPath);
@@ -63,6 +65,8 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
     null,
   );
   const [message, setMessage] = useState<string | null>(null);
+  const [expiringDialogNode, setExpiringDialogNode] = useState<R2ExplorerNode | null>(null);
+  const [expiringMinutes, setExpiringMinutes] = useState("15");
 
   const visibleNodes = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -113,10 +117,11 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
       setMessage("Expiring URL copied.");
       return;
     }
-    await createExpiringLink(node);
+    setExpiringDialogNode(node);
+    setExpiringMinutes("15");
   };
 
-  const createExpiringLink = async (node: R2ExplorerNode) => {
+  const createExpiringLink = async (node: R2ExplorerNode, ttlMinutes: number) => {
     if (!activeConnectionId || !activeConnection || node.kind !== "file") {
       return;
     }
@@ -124,7 +129,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
       activeConnectionId,
       activeConnection.bucketName,
       node.key,
-      900,
+      Math.max(1, Math.floor(ttlMinutes)) * 60,
     );
     setPresignedUrl(node.key, signed);
     await navigator.clipboard.writeText(signed.url);
@@ -325,7 +330,8 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
               await downloadNode(selectedFile);
             }}
             onCreateExpiringLink={async () => {
-              await createExpiringLink(selectedFile);
+              setExpiringDialogNode(selectedFile);
+              setExpiringMinutes("15");
             }}
           />
         ) : (
@@ -366,18 +372,25 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
               </button>
               <button
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
-                onClick={() => runNodeAction(createExpiringLink)}
+                onClick={() =>
+                  runNodeAction((node) => {
+                    setExpiringDialogNode(node);
+                    setExpiringMinutes("15");
+                  })
+                }
               >
                 <Link2 className="h-3.5 w-3.5 text-app-muted" />
                 Create Expiring Link
               </button>
-              <button
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
-                onClick={() => runNodeAction(copyExpiringUrl)}
-              >
-                <Copy className="h-3.5 w-3.5 text-app-muted" />
-                Copy Expiring URL
-              </button>
+              {nodeMenu.node.signedUrl ? (
+                <button
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+                  onClick={() => runNodeAction(copyExpiringUrl)}
+                >
+                  <Copy className="h-3.5 w-3.5 text-app-muted" />
+                  Copy Expiring URL
+                </button>
+              ) : null}
               <button
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
                 onClick={() => runNodeAction(rename)}
@@ -462,7 +475,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
       ) : null}
 
       {confirmDelete ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/45 p-4">
+        <div className="overlay-backdrop fixed inset-0 z-40 flex items-center justify-center p-4">
           <div className="glass-shell w-full max-w-md rounded-app p-5">
             <h3 className="text-sm font-semibold text-app-text">
               Confirm delete
@@ -487,6 +500,63 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
                 onClick={() => void executeDelete()}
               >
                 Confirm delete
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {expiringDialogNode?.kind === "file" ? (
+        <div className="overlay-backdrop fixed inset-0 z-40 flex items-center justify-center p-4">
+          <div className="glass-shell w-full max-w-md rounded-app p-5">
+            <h3 className="text-sm font-semibold text-app-text">Create Expiring Link</h3>
+            <p className="mt-2 text-xs text-app-muted break-all">{expiringDialogNode.name}</p>
+            <div className="mt-4 grid grid-cols-4 gap-2">
+              {TTL_PRESETS_MINUTES.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={`rounded border px-2 py-1.5 text-xs ${
+                    Number(expiringMinutes) === value
+                      ? "border-accent bg-accent-soft text-app-text"
+                      : "border-app-border/20 bg-white/[0.04] text-app-muted hover:text-app-text"
+                  }`}
+                  onClick={() => setExpiringMinutes(String(value))}
+                >
+                  {value >= 60 ? `${value / 60}h` : `${value}m`}
+                </button>
+              ))}
+            </div>
+            <label className="mt-3 block text-xs text-app-muted">
+              Custom minutes
+              <input
+                type="number"
+                min={1}
+                className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text"
+                value={expiringMinutes}
+                onChange={(event) => setExpiringMinutes(event.target.value)}
+              />
+            </label>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                className="rounded border border-app-border/20 px-3 py-1.5 text-xs"
+                onClick={() => setExpiringDialogNode(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="rounded border border-accent bg-accent-soft px-3 py-1.5 text-xs text-app-text"
+                onClick={() => {
+                  const ttl = Number(expiringMinutes);
+                  if (!Number.isFinite(ttl) || ttl <= 0) {
+                    setMessage("Invalid TTL minutes.");
+                    return;
+                  }
+                  const node = expiringDialogNode;
+                  setExpiringDialogNode(null);
+                  void createExpiringLink(node, ttl);
+                }}
+              >
+                Generate
               </button>
             </div>
           </div>

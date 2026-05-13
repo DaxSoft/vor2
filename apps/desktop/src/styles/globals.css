@@ -60,6 +60,12 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.055);
 }
 
+.overlay-backdrop {
+  background: rgba(4, 10, 18, 0.46);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
 [data-theme="light"] .app-background {
   background:
     radial-gradient(circle at 78% 2%, rgba(76, 149, 255, 0.14), transparent 50%),
@@ -68,7 +74,9 @@ body {
 }
 
 [data-theme="light"] .glass-shell {
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.56);
+  backdrop-filter: blur(36px) saturate(145%);
+  -webkit-backdrop-filter: blur(36px) saturate(145%);
   border: 1px solid rgba(30, 74, 136, 0.12);
   box-shadow:
     0 18px 56px rgba(25, 52, 95, 0.16),
@@ -80,6 +88,12 @@ body {
     linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.56)),
     rgba(229, 238, 251, 0.6);
   border: 1px solid rgba(30, 74, 136, 0.12);
+}
+
+[data-theme="light"] .overlay-backdrop {
+  background: rgba(223, 233, 247, 0.42);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 [data-theme="light"] .text-app-text {
@@ -95,6 +109,19 @@ body {
   background-color: rgba(36, 136, 255, 0.12) !important;
 }
 
+[data-theme="light"] .bg-white\/\[0\.04\] {
+  background-color: rgba(255, 255, 255, 0.36) !important;
+}
+
+[data-theme="light"] .bg-white\/\[0\.05\] {
+  background-color: rgba(255, 255, 255, 0.42) !important;
+}
+
+[data-theme="light"] .bg-white\/\[0\.03\],
+[data-theme="light"] .bg-white\/\[0\.02\] {
+  background-color: rgba(255, 255, 255, 0.32) !important;
+}
+
 [data-theme="light"] .border-app-border\/20,
 [data-theme="light"] .border-app-border\/35,
 [data-theme="light"] .border-app-border\/45 {
@@ -104,6 +131,16 @@ body {
 [data-theme="light"] .hover\:bg-white\/5:hover,
 [data-theme="light"] .hover\:bg-white\/10:hover {
   background-color: rgba(29, 78, 156, 0.08) !important;
+}
+
+[data-theme="light"] .text-sky-100,
+[data-theme="light"] .text-sky-200,
+[data-theme="light"] .text-sky-300 {
+  color: #15508d !important;
+}
+
+[data-theme="light"] .text-rose-200 {
+  color: #8b2940 !important;
 }
 
 * {

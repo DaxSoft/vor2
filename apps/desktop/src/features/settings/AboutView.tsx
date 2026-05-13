@@ -19,12 +19,12 @@ export function AboutView({ onClose }: AboutViewProps) {
       <div className="space-y-3 text-sm text-app-muted">
         <p>
           <span className="font-semibold text-accent">vor2</span> is a{" "}
-          <span className="font-semibold text-white">desktop-first Cloudflare R2 explorer</span> made to keep storage
+          <span className="font-semibold text-app-text">desktop-first Cloudflare R2 explorer</span> made to keep storage
           workflows simple.
         </p>
         <p>
           Core goal: Cloudflare R2 is powerful, but managing files often means opening the Cloudflare dashboard,
-          external tools, or direct API calls. <span className="font-semibold text-white">vor2 makes this easier</span>{" "}
+          external tools, or direct API calls. <span className="font-semibold text-app-text">vor2 makes this easier</span>{" "}
           with one app for browsing buckets, uploading files, and copying public URLs quickly.
         </p>
         <p>
@@ -51,7 +51,7 @@ export function AboutView({ onClose }: AboutViewProps) {
           .
         </p>
         <p>
-          Version: <span className="font-semibold text-white">beta 0.0.1</span>
+          Version: <span className="font-semibold text-app-text">beta 0.0.1</span>
         </p>
       </div>
     </div>

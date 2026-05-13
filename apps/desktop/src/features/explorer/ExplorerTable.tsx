@@ -48,7 +48,7 @@ export function ExplorerTable({
   }, []);
 
   return (
-    <table className="w-full table-fixed text-left text-[13px]">
+    <table className="w-full table-fixed text-left text-[13px] text-app-text">
       <thead>
         <tr className="border-b border-app-border/20 text-xs font-semibold text-app-muted">
           <th className="px-3 py-2">Name</th>
@@ -78,7 +78,7 @@ export function ExplorerTable({
                 ) : (
                   <File className="h-4 w-4 shrink-0 text-accent" />
                 )}
-                <span className="truncate">{node.name}</span>
+                <span className="truncate text-app-text">{node.name}</span>
               </div>
             </td>
             <td className="px-3 py-2 text-app-muted">
@@ -94,7 +94,7 @@ export function ExplorerTable({
             </td>
             <td className="px-3 py-2 text-app-muted">
               {node.kind === "file" ? (
-                <span className="inline-flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1.5 text-app-text">
                   <span
                     className={`h-1.5 w-1.5 rounded-full ${
                       node.signedUrl

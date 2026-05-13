@@ -12,7 +12,7 @@ export function DetailsPanel({
   node: R2FileNode;
   onDelete: (key: string) => Promise<void>;
   onDownload: (key: string) => Promise<void>;
-  onCreateExpiringLink: (key: string) => Promise<void>;
+  onCreateExpiringLink: (key: string) => void;
 }) {
   const [message, setMessage] = useState<string | null>(null);
   const previewUrl = node.signedUrl ?? node.publicUrl;
@@ -89,9 +89,8 @@ export function DetailsPanel({
     setMessage("ETag copied.");
   };
 
-  const createExpiringLink = async () => {
-    await onCreateExpiringLink(node.key);
-    setMessage("New expiring link created.");
+  const createExpiringLink = () => {
+    onCreateExpiringLink(node.key);
   };
 
   const download = async () => {
@@ -232,18 +231,20 @@ export function DetailsPanel({
           <Share2 className="mr-1 inline h-3 w-3" />
           Share
         </button>
+        {node.signedUrl ? (
+          <button
+            type="button"
+            className="col-span-2 rounded-lg border border-sky-400/30 bg-sky-500/10 px-2 py-1.5 text-left text-sky-100"
+            onClick={() => void copyExpiringUrl()}
+          >
+            <Copy className="mr-1 inline h-3 w-3" />
+            Copy Expiring URL
+          </button>
+        ) : null}
         <button
           type="button"
           className="col-span-2 rounded-lg border border-sky-400/30 bg-sky-500/10 px-2 py-1.5 text-left text-sky-100"
-          onClick={() => void copyExpiringUrl()}
-        >
-          <Copy className="mr-1 inline h-3 w-3" />
-          Copy Expiring URL
-        </button>
-        <button
-          type="button"
-          className="col-span-2 rounded-lg border border-sky-400/30 bg-sky-500/10 px-2 py-1.5 text-left text-sky-100"
-          onClick={() => void createExpiringLink()}
+          onClick={createExpiringLink}
         >
           <TimerReset className="mr-1 inline h-3 w-3" />
           Create Expiring Link
