@@ -48,7 +48,7 @@ pub fn run() {
                     if state.inner().user_id.lock().is_ok() {
                         api.prevent_close();
                         let _ = window.hide();
-                        let _ = window.emit("toast", "R2 Explorer is still running in the tray.");
+                        let _ = window.emit("toast", "vor2 is still running in the tray.");
                     }
                 }
             }
@@ -79,6 +79,8 @@ pub fn run() {
             commands::backend::list_prefix_objects,
             commands::backend::rename_object,
             commands::backend::rename_prefix,
+            commands::backend::get_bucket_usage,
+            commands::backend::create_presigned_get_url,
             commands::backend::enqueue_uploads
         ])
         .run(tauri::generate_context!())

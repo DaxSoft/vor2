@@ -12,5 +12,9 @@ export const connectionService = {
 
   async setActive(connectionId: string): Promise<void> {
     await invoke("set_active_connection", { connectionId });
+  },
+
+  async getBucketUsage(connectionId: string, bucketName: string): Promise<{ objectCount: number; totalSizeBytes: number; source?: string }> {
+    return invoke("get_bucket_usage", { connectionId, bucketName });
   }
 };

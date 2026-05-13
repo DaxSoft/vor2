@@ -19,11 +19,16 @@ const connectionFields: ConnectionField[] = [
     label: "Endpoint",
     key: "endpoint",
     required: true,
-    placeholder: "https://<account-id>.r2.cloudflarestorage.com"
+    placeholder: "https://<account-id>.r2.cloudflarestorage.com",
   },
   { label: "Access Key ID", key: "accessKeyId", required: true },
-  { label: "Secret Access Key", key: "secretAccessKey", required: true, type: "password" },
-  { label: "Region", key: "region", required: false }
+  {
+    label: "Secret Access Key",
+    key: "secretAccessKey",
+    required: true,
+    type: "password",
+  },
+  { label: "Region", key: "region", required: false },
 ];
 
 const initialValue: R2ConnectionCreateInput = {
@@ -34,11 +39,13 @@ const initialValue: R2ConnectionCreateInput = {
   endpoint: "",
   accessKeyId: "",
   secretAccessKey: "",
-  region: "auto"
+  region: "auto",
 };
 
 export function ConnectionForm({ onCreated }: { onCreated: () => void }) {
-  const createConnection = useConnectionStore((state) => state.createConnection);
+  const createConnection = useConnectionStore(
+    (state) => state.createConnection,
+  );
   const error = useConnectionStore((state) => state.error);
   const isLoading = useConnectionStore((state) => state.isLoading);
   const [value, setValue] = useState<R2ConnectionCreateInput>(initialValue);
@@ -53,7 +60,9 @@ export function ConnectionForm({ onCreated }: { onCreated: () => void }) {
         });
       }}
     >
-      <h2 className="text-sm font-semibold text-app-text">Create your first R2 connection</h2>
+      <h2 className="text-sm font-semibold text-app-text">
+        Add your R2 connection
+      </h2>
       {connectionFields.map((field) => (
         <label key={field.key} className="block text-xs text-app-muted">
           {field.label}
@@ -62,7 +71,10 @@ export function ConnectionForm({ onCreated }: { onCreated: () => void }) {
             type={field.type ?? "text"}
             value={value[field.key] ?? ""}
             onChange={(event) => {
-              setValue((prev) => ({ ...prev, [field.key]: event.target.value }));
+              setValue((prev) => ({
+                ...prev,
+                [field.key]: event.target.value,
+              }));
             }}
             className="blue-focus mt-1 block w-full rounded-lg border border-app-border bg-white/5 px-3 py-2 text-sm text-app-text"
             placeholder={field.placeholder}

@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  ChevronLeft,
   Copy,
   Download,
   FolderPlus,
+  Link2,
   PencilLine,
   RefreshCw,
   Share2,
   Trash2,
-  UploadCloud
+  UploadCloud,
 } from "lucide-react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { buildPublicUrl } from "@r2-explorer/r2/src/path-utils";
 import { Breadcrumb } from "./Breadcrumb";
 import { DetailsPanel } from "./DetailsPanel";
@@ -16,6 +19,7 @@ import { ExplorerTable } from "./ExplorerTable";
 import { explorerService } from "./explorer.service";
 import { useExplorerStore } from "./explorer.store";
 import { useConnectionStore } from "@/features/connections/connection.store";
+import { formatBytes } from "@/lib/format";
 import type { R2ExplorerNode } from "./explorer.types";
 
 interface ExplorerViewProps {
@@ -34,6 +38,8 @@ interface BackgroundContextMenuState {
   y: number;
 }
 
+const TTL_PRESETS_MINUTES = [1, 5, 15, 30, 60, 720, 1440];
+
 export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
   const nodes = useExplorerStore((state) => state.nodes);
   const currentPath = useExplorerStore((state) => state.currentPath);
@@ -46,27 +52,41 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
   const openNode = useExplorerStore((state) => state.openNode);
   const selectNode = useExplorerStore((state) => state.selectNode);
   const renameNode = useExplorerStore((state) => state.renameNode);
-  const activeConnectionId = useConnectionStore((state) => state.activeConnectionId);
+  const goParent = useExplorerStore((state) => state.goParent);
+  const setPresignedUrl = useExplorerStore((state) => state.setPresignedUrl);
+  const activeConnectionId = useConnectionStore(
+    (state) => state.activeConnectionId,
+  );
   const connections = useConnectionStore((state) => state.items);
   const [nodeMenu, setNodeMenu] = useState<NodeContextMenuState | null>(null);
-  const [backgroundMenu, setBackgroundMenu] = useState<BackgroundContextMenuState | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<R2ExplorerNode | null>(null);
+  const [backgroundMenu, setBackgroundMenu] =
+    useState<BackgroundContextMenuState | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<R2ExplorerNode | null>(
+    null,
+  );
   const [message, setMessage] = useState<string | null>(null);
+  const [expiringDialogNode, setExpiringDialogNode] = useState<R2ExplorerNode | null>(null);
+  const [expiringMinutes, setExpiringMinutes] = useState("15");
 
   const visibleNodes = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) {
       return nodes;
     }
-    return nodes.filter((node) => node.name.toLowerCase().includes(query) || node.key.toLowerCase().includes(query));
+    return nodes.filter(
+      (node) =>
+        node.name.toLowerCase().includes(query) ||
+        node.key.toLowerCase().includes(query),
+    );
   }, [nodes, searchQuery]);
 
   const selectedNode = useMemo(
     () => visibleNodes.find((node) => node.id === selectedNodeId),
-    [visibleNodes, selectedNodeId]
+    [visibleNodes, selectedNodeId],
   );
   const selectedFile = selectedNode?.kind === "file" ? selectedNode : null;
-  const activeConnection = connections.find((item) => item.id === activeConnectionId) ?? null;
+  const activeConnection =
+    connections.find((item) => item.id === activeConnectionId) ?? null;
 
   const closeMenus = () => {
     setNodeMenu(null);
@@ -88,16 +108,48 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
     setMessage("URL copied.");
   };
 
+  const copyExpiringUrl = async (node: R2ExplorerNode) => {
+    if (node.kind !== "file") {
+      return;
+    }
+    if (node.signedUrl) {
+      await navigator.clipboard.writeText(node.signedUrl);
+      setMessage("Expiring URL copied.");
+      return;
+    }
+    setExpiringDialogNode(node);
+    setExpiringMinutes("15");
+  };
+
+  const createExpiringLink = async (node: R2ExplorerNode, ttlMinutes: number) => {
+    if (!activeConnectionId || !activeConnection || node.kind !== "file") {
+      return;
+    }
+    const signed = await explorerService.createPresignedGetUrl(
+      activeConnectionId,
+      activeConnection.bucketName,
+      node.key,
+      Math.max(1, Math.floor(ttlMinutes)) * 60,
+    );
+    setPresignedUrl(node.key, signed);
+    await navigator.clipboard.writeText(signed.url);
+    setMessage("Expiring link created and copied.");
+  };
+
   const shareNode = async (node: R2ExplorerNode) => {
-    if (node.kind !== "file" || !node.publicUrl) {
-      setMessage("No public URL configured for this file.");
+    if (node.kind !== "file") {
+      return;
+    }
+    const url = node.signedUrl ?? node.publicUrl;
+    if (!url) {
+      setMessage("No URL available. Create an expiring link first.");
       return;
     }
     if (navigator.share) {
-      await navigator.share({ title: node.name, url: node.publicUrl });
+      await navigator.share({ title: node.name, url });
       return;
     }
-    await navigator.clipboard.writeText(node.publicUrl);
+    await navigator.clipboard.writeText(url);
     setMessage("Share not supported. URL copied.");
   };
 
@@ -107,27 +159,49 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
     }
 
     if (node.kind === "file") {
-      if (!node.publicUrl) {
-        setMessage("No public URL configured for this file.");
-        return;
+      let downloadUrl = node.signedUrl ?? node.publicUrl;
+      if (!downloadUrl) {
+        const signed = await explorerService.createPresignedGetUrl(
+          activeConnectionId,
+          activeConnection.bucketName,
+          node.key,
+          900,
+        );
+        setPresignedUrl(node.key, signed);
+        downloadUrl = signed.url;
       }
-      window.open(node.publicUrl, "_blank", "noopener,noreferrer");
+      await openUrl(downloadUrl);
+      setMessage("Download started.");
       return;
     }
 
-    if (!activeConnection.publicUrl) {
-      setMessage("No public URL configured for this connection.");
-      return;
-    }
-    const keys = await explorerService.listPrefixObjects(activeConnectionId, activeConnection.bucketName, node.key);
+    const keys = await explorerService.listPrefixObjects(
+      activeConnectionId,
+      activeConnection.bucketName,
+      node.key,
+    );
     for (const key of keys) {
-      const url = buildPublicUrl(activeConnection.publicUrl, key);
-      if (!url) {
-        continue;
+      let url: string | undefined;
+      if (activeConnection.publicUrl) {
+        url = buildPublicUrl(activeConnection.publicUrl, key) ?? undefined;
       }
-      window.open(url, "_blank", "noopener,noreferrer");
+      if (!url) {
+        const signed = await explorerService.createPresignedGetUrl(
+          activeConnectionId,
+          activeConnection.bucketName,
+          key,
+          900,
+        );
+        setPresignedUrl(key, signed);
+        url = signed.url;
+      }
+      await openUrl(url);
     }
-    setMessage(keys.length === 0 ? "Folder is empty." : `Opened ${keys.length} file download(s).`);
+    setMessage(
+      keys.length === 0
+        ? "Folder is empty."
+        : `Download started for ${keys.length} file(s).`,
+    );
   };
 
   const buildRenamedKey = (node: R2ExplorerNode, nextName: string): string => {
@@ -161,10 +235,16 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
     }
     await deleteNode(confirmDelete.key);
     setConfirmDelete(null);
-    setMessage(confirmDelete.kind === "folder" ? "Folder and subcontent deleted." : "File deleted.");
+    setMessage(
+      confirmDelete.kind === "folder"
+        ? "Folder and subcontent deleted."
+        : "File deleted.",
+    );
   };
 
-  const runNodeAction = (action: (node: R2ExplorerNode) => Promise<void> | void) => {
+  const runNodeAction = (
+    action: (node: R2ExplorerNode) => Promise<void> | void,
+  ) => {
     const menu = nodeMenu;
     closeMenus();
     if (!menu) {
@@ -179,9 +259,9 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
   };
 
   return (
-    <div className={`grid min-h-0 flex-1 gap-3 ${selectedFile ? "grid-cols-[1fr_320px]" : "grid-cols-1"}`}>
+    <div className="grid h-full min-h-0 gap-3 grid-cols-[1fr_320px]">
       <section
-        className="glass-panel flex min-h-0 flex-col rounded-panel border border-app-border p-3"
+        className="glass-panel flex min-h-0 flex-col rounded-panel border border-app-border/20 p-3"
         onContextMenu={(event) => {
           const target = event.target as HTMLElement;
           if (target.closest("tbody tr")) {
@@ -192,11 +272,25 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
           setNodeMenu(null);
         }}
       >
-        <div className="mb-3">
-          <Breadcrumb currentPath={currentPath} onOpen={(path) => void loadPath(path)} />
+        <div className="mb-3 flex items-center gap-2 border-b border-app-border/20 pb-2">
+          <button
+            type="button"
+            className="rounded-md border border-app-border/20 bg-white/[0.04] p-1 text-app-muted hover:text-app-text"
+            onClick={() => {
+              void goParent();
+            }}
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+          <Breadcrumb
+            currentPath={currentPath}
+            onOpen={(path) => void loadPath(path)}
+          />
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
-          {isLoading ? <p className="text-xs text-app-muted">Loading...</p> : null}
+          {isLoading ? (
+            <p className="text-xs text-app-muted">Loading...</p>
+          ) : null}
           {error ? <p className="text-xs text-rose-300">{error}</p> : null}
           {!isLoading && !error ? (
             <ExplorerTable
@@ -212,19 +306,40 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
             />
           ) : null}
         </div>
-        {message ? <p className="mt-2 text-[11px] text-app-soft">{message}</p> : null}
+        <div className="mt-2 flex items-center justify-between border-t border-app-border/20 pt-2 text-[11px] text-app-soft">
+          <span>{visibleNodes.length} items</span>
+          <span>
+            {selectedFile
+              ? `1 selected (${formatBytes(selectedFile.sizeBytes)})`
+              : "0 selected"}
+          </span>
+        </div>
+        {message ? (
+          <p className="mt-1 text-[11px] text-app-soft">{message}</p>
+        ) : null}
       </section>
 
-      {selectedFile ? (
-        <aside className="glass-panel rounded-panel border border-app-border p-3">
+      <aside className="glass-panel rounded-panel border border-app-border/20 p-3">
+        {selectedFile ? (
           <DetailsPanel
             node={selectedFile}
-            onDelete={async () => {
+            onDelete={async (_key) => {
               setConfirmDelete(selectedFile);
             }}
+            onDownload={async () => {
+              await downloadNode(selectedFile);
+            }}
+            onCreateExpiringLink={async () => {
+              setExpiringDialogNode(selectedFile);
+              setExpiringMinutes("15");
+            }}
           />
-        </aside>
-      ) : null}
+        ) : (
+          <div className="flex h-full items-center justify-center text-xs text-app-muted">
+            Select a file to view details
+          </div>
+        )}
+      </aside>
 
       {nodeMenu ? (
         <div
@@ -234,19 +349,52 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
         >
           {nodeMenu.node.kind === "file" ? (
             <>
-              <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10" onClick={() => runNodeAction(copyUrl)}>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+                onClick={() => runNodeAction(copyUrl)}
+              >
                 <Copy className="h-3.5 w-3.5 text-app-muted" />
                 Copy URL
               </button>
-              <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10" onClick={() => runNodeAction(shareNode)}>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+                onClick={() => runNodeAction(shareNode)}
+              >
                 <Share2 className="h-3.5 w-3.5 text-app-muted" />
                 Share
               </button>
-              <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10" onClick={() => runNodeAction(downloadNode)}>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+                onClick={() => runNodeAction(downloadNode)}
+              >
                 <Download className="h-3.5 w-3.5 text-app-muted" />
                 Download
               </button>
-              <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10" onClick={() => runNodeAction(rename)}>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+                onClick={() =>
+                  runNodeAction((node) => {
+                    setExpiringDialogNode(node);
+                    setExpiringMinutes("15");
+                  })
+                }
+              >
+                <Link2 className="h-3.5 w-3.5 text-app-muted" />
+                Create Expiring Link
+              </button>
+              {nodeMenu.node.signedUrl ? (
+                <button
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+                  onClick={() => runNodeAction(copyExpiringUrl)}
+                >
+                  <Copy className="h-3.5 w-3.5 text-app-muted" />
+                  Copy Expiring URL
+                </button>
+              ) : null}
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+                onClick={() => runNodeAction(rename)}
+              >
                 <PencilLine className="h-3.5 w-3.5 text-app-muted" />
                 Rename
               </button>
@@ -264,11 +412,17 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
             </>
           ) : (
             <>
-              <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10" onClick={() => runNodeAction(downloadNode)}>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+                onClick={() => runNodeAction(downloadNode)}
+              >
                 <Download className="h-3.5 w-3.5 text-app-muted" />
                 Download
               </button>
-              <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10" onClick={() => runNodeAction(rename)}>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+                onClick={() => runNodeAction(rename)}
+              >
                 <PencilLine className="h-3.5 w-3.5 text-app-muted" />
                 Rename
               </button>
@@ -296,7 +450,9 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
         >
           <button
             className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
-            onClick={() => runBackgroundAction(async () => loadPath(currentPath))}
+            onClick={() =>
+              runBackgroundAction(async () => loadPath(currentPath))
+            }
           >
             <RefreshCw className="h-3.5 w-3.5 text-app-muted" />
             Refresh
@@ -319,17 +475,24 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
       ) : null}
 
       {confirmDelete ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/45 p-4">
+        <div className="overlay-backdrop fixed inset-0 z-40 flex items-center justify-center p-4">
           <div className="glass-shell w-full max-w-md rounded-app p-5">
-            <h3 className="text-sm font-semibold text-app-text">Confirm delete</h3>
+            <h3 className="text-sm font-semibold text-app-text">
+              Confirm delete
+            </h3>
             <p className="mt-2 text-xs text-app-muted break-all">
               {confirmDelete.kind === "folder"
                 ? "Delete this folder and all files/subfolders inside?"
                 : "Delete this file?"}
             </p>
-            <p className="mt-1 text-[11px] text-app-soft break-all">{confirmDelete.key}</p>
+            <p className="mt-1 text-[11px] text-app-soft break-all">
+              {confirmDelete.key}
+            </p>
             <div className="mt-4 flex justify-end gap-2">
-              <button className="rounded border border-app-border px-3 py-1.5 text-xs" onClick={() => setConfirmDelete(null)}>
+              <button
+                className="rounded border border-app-border/20 px-3 py-1.5 text-xs"
+                onClick={() => setConfirmDelete(null)}
+              >
                 Cancel
               </button>
               <button
@@ -337,6 +500,63 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
                 onClick={() => void executeDelete()}
               >
                 Confirm delete
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {expiringDialogNode?.kind === "file" ? (
+        <div className="overlay-backdrop fixed inset-0 z-40 flex items-center justify-center p-4">
+          <div className="glass-shell w-full max-w-md rounded-app p-5">
+            <h3 className="text-sm font-semibold text-app-text">Create Expiring Link</h3>
+            <p className="mt-2 text-xs text-app-muted break-all">{expiringDialogNode.name}</p>
+            <div className="mt-4 grid grid-cols-4 gap-2">
+              {TTL_PRESETS_MINUTES.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={`rounded border px-2 py-1.5 text-xs ${
+                    Number(expiringMinutes) === value
+                      ? "border-accent bg-accent-soft text-app-text"
+                      : "border-app-border/20 bg-white/[0.04] text-app-muted hover:text-app-text"
+                  }`}
+                  onClick={() => setExpiringMinutes(String(value))}
+                >
+                  {value >= 60 ? `${value / 60}h` : `${value}m`}
+                </button>
+              ))}
+            </div>
+            <label className="mt-3 block text-xs text-app-muted">
+              Custom minutes
+              <input
+                type="number"
+                min={1}
+                className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text"
+                value={expiringMinutes}
+                onChange={(event) => setExpiringMinutes(event.target.value)}
+              />
+            </label>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                className="rounded border border-app-border/20 px-3 py-1.5 text-xs"
+                onClick={() => setExpiringDialogNode(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="rounded border border-accent bg-accent-soft px-3 py-1.5 text-xs text-app-text"
+                onClick={() => {
+                  const ttl = Number(expiringMinutes);
+                  if (!Number.isFinite(ttl) || ttl <= 0) {
+                    setMessage("Invalid TTL minutes.");
+                    return;
+                  }
+                  const node = expiringDialogNode;
+                  setExpiringDialogNode(null);
+                  void createExpiringLink(node, ttl);
+                }}
+              >
+                Generate
               </button>
             </div>
           </div>

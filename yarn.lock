@@ -477,6 +477,20 @@
     "@smithy/types" "^4.14.1"
     tslib "^2.6.2"
 
+"@aws-sdk/s3-request-presigner@^3.930.0":
+  version "3.1045.0"
+  resolved "https://registry.npmjs.org/@aws-sdk/s3-request-presigner/-/s3-request-presigner-3.1045.0.tgz#2e77a8e3323988c166c832006a781583bdccf820"
+  integrity sha512-VDRF8GIuUPX+K4DUYrvcODj/h54LOmdJ7DhpLQ0wrYrdxzIiJEpi0n9jZ1bbjT2UxhwTbOorse5EGo+gnOK2aA==
+  dependencies:
+    "@aws-sdk/signature-v4-multi-region" "^3.996.25"
+    "@aws-sdk/types" "^3.973.8"
+    "@aws-sdk/util-format-url" "^3.972.10"
+    "@smithy/middleware-endpoint" "^4.4.32"
+    "@smithy/protocol-http" "^5.3.14"
+    "@smithy/smithy-client" "^4.12.13"
+    "@smithy/types" "^4.14.1"
+    tslib "^2.6.2"
+
 "@aws-sdk/signature-v4-multi-region@^3.996.25":
   version "3.996.25"
   resolved "https://registry.npmjs.org/@aws-sdk/signature-v4-multi-region/-/signature-v4-multi-region-3.996.25.tgz#b50651b7e4f9c82482416caa9953ad17645d4a2d"
@@ -526,6 +540,16 @@
     "@smithy/types" "^4.14.1"
     "@smithy/url-parser" "^4.2.14"
     "@smithy/util-endpoints" "^3.4.2"
+    tslib "^2.6.2"
+
+"@aws-sdk/util-format-url@^3.972.10":
+  version "3.972.10"
+  resolved "https://registry.npmjs.org/@aws-sdk/util-format-url/-/util-format-url-3.972.10.tgz#63184b56627b50842cf37cc0e63251944fc234ed"
+  integrity sha512-DEKiHNJVtNxdyTeQspzY+15Po/kHm6sF0Cs4HV9Q2+lplB63+DrvdeiSoOSdWEWAoO2RcY1veoXVDz2tWxWCgQ==
+  dependencies:
+    "@aws-sdk/types" "^3.973.8"
+    "@smithy/querystring-builder" "^4.2.14"
+    "@smithy/types" "^4.14.1"
     tslib "^2.6.2"
 
 "@aws-sdk/util-locate-window@^3.0.0":
@@ -1274,6 +1298,14 @@
   version "5.4.1"
   resolved "https://registry.npmjs.org/@smithy/protocol-http/-/protocol-http-5.4.1.tgz#7acf497f56b95fa13bb89d8e230175ab1bb16ca0"
   integrity sha512-8irPNCQgYxcSFp1aGcnDNFkTwSA+xPUaFq9V/v1+JXWu8sKr5b3cFmg2kBTkjkvypDmGeNffuNu0x5iqw1NoAw==
+  dependencies:
+    "@smithy/core" "^3.24.1"
+    tslib "^2.6.2"
+
+"@smithy/querystring-builder@^4.2.14":
+  version "4.3.1"
+  resolved "https://registry.npmjs.org/@smithy/querystring-builder/-/querystring-builder-4.3.1.tgz#3de7adc9c32270907c99d6ed0f1faea55b182184"
+  integrity sha512-toyi8sXPWDNoVH6yK7sXJ9dm5uxw2tWLCHzPy/t16Fvl62Es4vXQXzlilyNaw+DqFwxSlrFClh0rGLPUF2p9Lg==
   dependencies:
     "@smithy/core" "^3.24.1"
     tslib "^2.6.2"

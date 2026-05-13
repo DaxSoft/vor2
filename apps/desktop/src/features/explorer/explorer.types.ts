@@ -22,6 +22,8 @@ export interface R2FileNode extends R2BaseNode {
   etag?: string;
   storageClass?: string;
   publicUrl?: string;
+  signedUrl?: string;
+  signedUrlExpiresAt?: Date;
   isPublic: boolean;
 }
 
@@ -43,6 +45,7 @@ export interface ExplorerStoreState {
   sortBy: SortBy;
   sortDirection: "asc" | "desc";
   viewMode: "table";
+  presignedByKey: Record<string, { url: string; expiresAt: string; ttlSeconds: number }>;
   loadPath: (path: string) => Promise<void>;
   refresh: () => Promise<void>;
   selectNode: (id: string) => void;
@@ -55,4 +58,5 @@ export interface ExplorerStoreState {
   setSearchQuery: (query: string) => void;
   setSort: (sortBy: SortBy, direction: "asc" | "desc") => void;
   setActiveConnection: (connectionId: string, bucketName: string, publicUrl?: string) => void;
+  setPresignedUrl: (key: string, value: { url: string; expiresAt: string; ttlSeconds: number }) => void;
 }

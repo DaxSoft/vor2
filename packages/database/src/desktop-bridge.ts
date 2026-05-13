@@ -3,7 +3,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
-import { CopyObjectCommand, DeleteObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { CopyObjectCommand, DeleteObjectCommand, GetObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { prisma } from "./client";
 
 type Json = Record<string, unknown>;
@@ -133,6 +134,84 @@ async function listAllObjects(client: S3Client, bucket: string, prefix: string):
   } while (continuationToken);
 
   return items;
+}
+
+async function getGraphQlBucketUsage(accountId: string, bucketName: string): Promise<{ objectCount: number; totalSizeBytes: number } | null> {
+  const token = process.env.CLOUDFLARE_API_TOKEN?.trim();
+  if (!token) {
+    return null;
+  }
+
+  const end = new Date();
+  const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
+  const query = `
+    query R2StorageUsage($accountTag: string!, $bucketName: string!, $startDate: Time, $endDate: Time) {
+      viewer {
+        accounts(filter: { accountTag: $accountTag }) {
+          r2StorageAdaptiveGroups(
+            limit: 1
+            filter: {
+              datetime_geq: $startDate
+              datetime_leq: $endDate
+              bucketName: $bucketName
+            }
+            orderBy: [datetime_DESC]
+          ) {
+            max {
+              objectCount
+              payloadSize
+              metadataSize
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  const response = await fetch("https://api.cloudflare.com/client/v4/graphql", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      query,
+      variables: {
+        accountTag: accountId,
+        bucketName,
+        startDate: start.toISOString(),
+        endDate: end.toISOString()
+      }
+    })
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const data = await response.json() as {
+    data?: {
+      viewer?: {
+        accounts?: Array<{
+          r2StorageAdaptiveGroups?: Array<{
+            max?: { objectCount?: number; payloadSize?: number; metadataSize?: number };
+          }>;
+        }>;
+      };
+    };
+  };
+
+  const group = data.data?.viewer?.accounts?.[0]?.r2StorageAdaptiveGroups?.[0];
+  if (!group?.max) {
+    return null;
+  }
+  const objectCount = Number(group.max.objectCount ?? 0);
+  const payloadSize = Number(group.max.payloadSize ?? 0);
+  const metadataSize = Number(group.max.metadataSize ?? 0);
+  return {
+    objectCount,
+    totalSizeBytes: payloadSize + metadataSize
+  };
 }
 
 async function currentUserId(): Promise<string> {
@@ -371,11 +450,14 @@ async function run(action: string, payload: Json): Promise<unknown> {
     case "delete_prefix":
     case "list_prefix_objects":
     case "rename_object":
-    case "rename_prefix": {
+    case "rename_prefix":
+    case "get_bucket_usage":
+    case "create_presigned_get_url": {
       const userId = await currentUserId();
       const connectionId = String(payload.connectionId);
       const rows = await prisma.$queryRawUnsafe<
         Array<{
+          account_id: string | null;
           endpoint: string;
           region: string;
           encrypted_access_key_id: string;
@@ -388,7 +470,7 @@ async function run(action: string, payload: Json): Promise<unknown> {
           encryption_tag: string;
         }>
       >(
-        `SELECT endpoint, region, encrypted_access_key_id, encrypted_secret_access_key,
+        `SELECT account_id, endpoint, region, encrypted_access_key_id, encrypted_secret_access_key,
                 encrypted_access_key_iv, encrypted_access_key_tag,
                 encrypted_secret_access_key_iv, encrypted_secret_access_key_tag,
                 encryption_iv, encryption_tag
@@ -500,6 +582,38 @@ async function run(action: string, payload: Json): Promise<unknown> {
         await client.send(new PutObjectCommand({ Bucket: String(payload.bucketName), Key: newPrefix, Body: "" }));
         await client.send(new DeleteObjectCommand({ Bucket: String(payload.bucketName), Key: oldPrefix }));
         return null;
+      }
+
+      if (action === "get_bucket_usage") {
+        if (row.account_id) {
+          const usage = await getGraphQlBucketUsage(row.account_id, String(payload.bucketName));
+          if (usage) {
+            return { ...usage, source: "graphql" };
+          }
+        }
+        const objects = await listAllObjects(client, String(payload.bucketName), "");
+        const totalSizeBytes = objects.reduce((sum, item) => sum + item.size, 0);
+        return {
+          objectCount: objects.length,
+          totalSizeBytes,
+          source: "scan"
+        };
+      }
+
+      if (action === "create_presigned_get_url") {
+        const objectKey = String(payload.objectKey ?? "").replace(/^\/+/, "");
+        if (!objectKey.trim()) {
+          throw new Error("Object key is required.");
+        }
+        const ttlInput = Number(payload.ttlSeconds ?? 900);
+        const ttlSeconds = Number.isFinite(ttlInput) ? Math.max(60, Math.min(7 * 24 * 60 * 60, Math.floor(ttlInput))) : 900;
+        const command = new GetObjectCommand({
+          Bucket: String(payload.bucketName),
+          Key: objectKey
+        });
+        const url = await getSignedUrl(client, command, { expiresIn: ttlSeconds });
+        const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
+        return { url, ttlSeconds, expiresAt };
       }
 
       const pathValue = String(payload.path ?? "").replace(/^\/+|\/+$/g, "");
