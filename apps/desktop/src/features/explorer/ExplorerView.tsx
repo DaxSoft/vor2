@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  ChevronLeft,
   Copy,
   Download,
   FolderPlus,
@@ -16,6 +17,7 @@ import { ExplorerTable } from "./ExplorerTable";
 import { explorerService } from "./explorer.service";
 import { useExplorerStore } from "./explorer.store";
 import { useConnectionStore } from "@/features/connections/connection.store";
+import { formatBytes } from "@/lib/format";
 import type { R2ExplorerNode } from "./explorer.types";
 
 interface ExplorerViewProps {
@@ -46,6 +48,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
   const openNode = useExplorerStore((state) => state.openNode);
   const selectNode = useExplorerStore((state) => state.selectNode);
   const renameNode = useExplorerStore((state) => state.renameNode);
+  const goParent = useExplorerStore((state) => state.goParent);
   const activeConnectionId = useConnectionStore((state) => state.activeConnectionId);
   const connections = useConnectionStore((state) => state.items);
   const [nodeMenu, setNodeMenu] = useState<NodeContextMenuState | null>(null);
@@ -179,9 +182,9 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
   };
 
   return (
-    <div className={`grid min-h-0 flex-1 gap-3 ${selectedFile ? "grid-cols-[1fr_320px]" : "grid-cols-1"}`}>
+    <div className="grid min-h-0 flex-1 gap-3 grid-cols-[1fr_320px]">
       <section
-        className="glass-panel flex min-h-0 flex-col rounded-panel border border-app-border p-3"
+        className="glass-panel flex min-h-0 flex-col rounded-panel border border-app-border/45 p-3"
         onContextMenu={(event) => {
           const target = event.target as HTMLElement;
           if (target.closest("tbody tr")) {
@@ -192,7 +195,16 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
           setNodeMenu(null);
         }}
       >
-        <div className="mb-3">
+        <div className="mb-3 flex items-center gap-2 border-b border-app-border/60 pb-2">
+          <button
+            type="button"
+            className="rounded-md border border-app-border/70 bg-white/[0.04] p-1 text-app-muted hover:text-app-text"
+            onClick={() => {
+              void goParent();
+            }}
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
           <Breadcrumb currentPath={currentPath} onOpen={(path) => void loadPath(path)} />
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
@@ -212,19 +224,27 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
             />
           ) : null}
         </div>
-        {message ? <p className="mt-2 text-[11px] text-app-soft">{message}</p> : null}
+        <div className="mt-2 flex items-center justify-between border-t border-app-border/60 pt-2 text-[11px] text-app-soft">
+          <span>{visibleNodes.length} items</span>
+          <span>{selectedFile ? `1 selected (${formatBytes(selectedFile.sizeBytes)})` : "0 selected"}</span>
+        </div>
+        {message ? <p className="mt-1 text-[11px] text-app-soft">{message}</p> : null}
       </section>
 
-      {selectedFile ? (
-        <aside className="glass-panel rounded-panel border border-app-border p-3">
+      <aside className="glass-panel rounded-panel border border-app-border/45 p-3">
+        {selectedFile ? (
           <DetailsPanel
             node={selectedFile}
             onDelete={async () => {
               setConfirmDelete(selectedFile);
             }}
           />
-        </aside>
-      ) : null}
+        ) : (
+          <div className="flex h-full items-center justify-center text-xs text-app-muted">
+            Select a file to view details
+          </div>
+        )}
+      </aside>
 
       {nodeMenu ? (
         <div

@@ -9,7 +9,7 @@
   --panel: rgba(12, 17, 27, 0.68);
   --panel-strong: rgba(15, 21, 34, 0.86);
   --panel-soft: rgba(255, 255, 255, 0.045);
-  --border: rgba(255, 255, 255, 0.105);
+  --border: rgba(255, 255, 255, 0.06);
   --border-blue: rgba(36, 136, 255, 0.42);
   --text: #f5f8ff;
   --text-muted: #aebbd1;
@@ -36,16 +36,16 @@ body {
 
 .app-background {
   background:
-    radial-gradient(circle at 80% 10%, rgba(36, 136, 255, 0.1), transparent 45%),
-    radial-gradient(circle at 10% 90%, rgba(36, 136, 255, 0.08), transparent 38%),
-    rgba(6, 9, 16, 0.22);
+    radial-gradient(circle at 80% 0%, rgba(36, 136, 255, 0.18), transparent 45%),
+    radial-gradient(circle at 10% 100%, rgba(36, 136, 255, 0.12), transparent 42%),
+    rgba(6, 9, 16, 0.18);
 }
 
 .glass-shell {
   background: rgba(8, 12, 20, 0.34);
   backdrop-filter: blur(42px) saturate(150%);
   -webkit-backdrop-filter: blur(42px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   box-shadow:
     0 24px 80px rgba(0, 0, 0, 0.42),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -54,10 +54,10 @@ body {
 .glass-panel {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02)),
-    rgba(9, 14, 24, 0.42);
-  backdrop-filter: blur(36px) saturate(145%);
-  -webkit-backdrop-filter: blur(36px) saturate(145%);
-  border: 1px solid var(--border);
+    rgba(9, 14, 24, 0.35);
+  backdrop-filter: blur(44px) saturate(148%);
+  -webkit-backdrop-filter: blur(44px) saturate(148%);
+  border: 1px solid rgba(255, 255, 255, 0.055);
 }
 
 * {

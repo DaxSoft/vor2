@@ -92,6 +92,14 @@ pub struct PrefixObjectsDto {
     pub keys: Vec<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BucketUsageDto {
+    pub object_count: u64,
+    pub total_size_bytes: u64,
+    pub source: Option<String>,
+}
+
 fn workspace_root() -> Result<PathBuf, String> {
     let here = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     Ok(here.join("..").join("..").join(".."))
@@ -423,6 +431,20 @@ pub async fn rename_prefix(
         }),
     )?;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn get_bucket_usage(
+    connection_id: String,
+    bucket_name: String,
+) -> Result<BucketUsageDto, String> {
+    run_bridge(
+        "get_bucket_usage",
+        serde_json::json!({
+            "connectionId": connection_id,
+            "bucketName": bucket_name
+        }),
+    )
 }
 
 #[tauri::command]

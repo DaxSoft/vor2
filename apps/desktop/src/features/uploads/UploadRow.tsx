@@ -14,7 +14,7 @@ export function UploadRow({
   onRetry: () => void;
 }) {
   return (
-    <div className="rounded-lg border border-app-border bg-white/5 p-2">
+    <div className="rounded-lg border border-app-border/70 bg-white/[0.04] p-2">
       <div className="mb-1 flex items-center justify-between text-xs">
         <span className="truncate text-app-text">{task.fileName}</span>
         <span className="text-app-muted">{Math.round(task.progress)}%</span>
@@ -26,20 +26,17 @@ export function UploadRow({
         <span>
           {formatBytes(task.uploadedBytes)} / {formatBytes(task.sizeBytes)}
         </span>
-        <span>{task.status}</span>
+        <span className="uppercase tracking-wide">{task.status}</span>
       </div>
-      <div className="mt-2 flex gap-2 text-[11px]">
-        <button type="button" className="rounded border border-app-border px-2 py-1" onClick={onPause}>
-          <Pause className="mr-1 inline h-3 w-3" />
-          Pause
+      <div className="mt-2 flex justify-end gap-2 text-[11px]">
+        <button type="button" className="rounded border border-app-border/70 bg-white/[0.04] px-2 py-1" onClick={onPause}>
+          <Pause className="h-3 w-3" />
         </button>
-        <button type="button" className="rounded border border-app-border px-2 py-1" onClick={onCancel}>
-          <XCircle className="mr-1 inline h-3 w-3" />
-          Cancel
+        <button type="button" className="rounded border border-app-border/70 bg-white/[0.04] px-2 py-1" onClick={onCancel}>
+          <XCircle className="h-3 w-3" />
         </button>
-        <button type="button" className="rounded border border-app-border px-2 py-1" onClick={onRetry}>
-          <RotateCcw className="mr-1 inline h-3 w-3" />
-          Retry
+        <button type="button" className="rounded border border-app-border/70 bg-white/[0.04] px-2 py-1" onClick={onRetry}>
+          <RotateCcw className="h-3 w-3" />
         </button>
         {task.status === "completed" ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : null}
       </div>

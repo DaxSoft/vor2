@@ -12,7 +12,12 @@ import { useUploadStore } from "@/features/uploads/upload.store";
 import { SettingsView } from "@/features/settings/SettingsView";
 import { AboutView } from "@/features/settings/AboutView";
 import { bindTrayEvents } from "@/features/tray/tray.events";
-import { closeToTray, minimizeWindow, startDraggingWindow, toggleMaximizeWindow } from "@/lib/desktop-window";
+import {
+  closeToTray,
+  minimizeWindow,
+  startDraggingWindow,
+  toggleMaximizeWindow,
+} from "@/lib/desktop-window";
 
 interface FileDialogEntry {
   path: string;
@@ -25,9 +30,13 @@ export function AppShell() {
   const createFolder = useExplorerStore((state) => state.createFolder);
   const refresh = useExplorerStore((state) => state.refresh);
   const loadPath = useExplorerStore((state) => state.loadPath);
-  const setActiveExplorerConnection = useExplorerStore((state) => state.setActiveConnection);
+  const setActiveExplorerConnection = useExplorerStore(
+    (state) => state.setActiveConnection,
+  );
   const currentPath = useExplorerStore((state) => state.currentPath);
-  const activeConnectionId = useConnectionStore((state) => state.activeConnectionId);
+  const activeConnectionId = useConnectionStore(
+    (state) => state.activeConnectionId,
+  );
   const connections = useConnectionStore((state) => state.items);
   const addPathEntries = useUploadStore((state) => state.addPathEntries);
   const pauseAll = useUploadStore((state) => state.pauseAll);
@@ -41,15 +50,20 @@ export function AppShell() {
   const [showSettings, setShowSettings] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showConnectionForm, setShowConnectionForm] = useState(false);
-  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(true);
 
-  const activeConnection = connections.find((item) => item.id === activeConnectionId) ?? null;
+  const activeConnection =
+    connections.find((item) => item.id === activeConnectionId) ?? null;
 
   useEffect(() => {
     if (!activeConnection) {
       return;
     }
-    setActiveExplorerConnection(activeConnection.id, activeConnection.bucketName, activeConnection.publicUrl);
+    setActiveExplorerConnection(
+      activeConnection.id,
+      activeConnection.bucketName,
+      activeConnection.publicUrl,
+    );
     void loadPath(activeConnection.lastSelectedPath || "/");
   }, [activeConnection, loadPath, setActiveExplorerConnection]);
 
@@ -75,27 +89,45 @@ export function AppShell() {
       unsubscribers.push(...items);
     });
 
-    void getCurrentWindow().onDragDropEvent(async (event) => {
-      if (event.payload.type !== "drop") {
-        return;
-      }
-      if (!activeConnection) {
-        return;
-      }
-      setQueueVisible(true);
-      const entries = await invoke<FileDialogEntry[]>("inspect_file_paths", { paths: event.payload.paths });
-      await addPathEntries(entries, currentPath, activeConnection.id, activeConnection.bucketName);
-      await refresh();
-    }).then((unlisten) => {
-      unsubscribers.push(unlisten);
-    });
+    void getCurrentWindow()
+      .onDragDropEvent(async (event) => {
+        if (event.payload.type !== "drop") {
+          return;
+        }
+        if (!activeConnection) {
+          return;
+        }
+        setQueueVisible(true);
+        const entries = await invoke<FileDialogEntry[]>("inspect_file_paths", {
+          paths: event.payload.paths,
+        });
+        await addPathEntries(
+          entries,
+          currentPath,
+          activeConnection.id,
+          activeConnection.bucketName,
+        );
+        await refresh();
+      })
+      .then((unlisten) => {
+        unsubscribers.push(unlisten);
+      });
 
     return () => {
       for (const unlisten of unsubscribers) {
         unlisten();
       }
     };
-  }, [activeConnection, addPathEntries, currentPath, isQueuePaused, pauseAll, refresh, resumeAll, setQueueVisible]);
+  }, [
+    activeConnection,
+    addPathEntries,
+    currentPath,
+    isQueuePaused,
+    pauseAll,
+    refresh,
+    resumeAll,
+    setQueueVisible,
+  ]);
 
   const onUpload = useMemo(
     () => async () => {
@@ -107,10 +139,15 @@ export function AppShell() {
       if (entries.length === 0) {
         return;
       }
-      await addPathEntries(entries, currentPath, activeConnection.id, activeConnection.bucketName);
+      await addPathEntries(
+        entries,
+        currentPath,
+        activeConnection.id,
+        activeConnection.bucketName,
+      );
       await refresh();
     },
-    [activeConnection, addPathEntries, currentPath, refresh, setQueueVisible]
+    [activeConnection, addPathEntries, currentPath, refresh, setQueueVisible],
   );
 
   const onNewFolder = useMemo(
@@ -122,7 +159,7 @@ export function AppShell() {
       setFolderName(value);
       void createFolder(value);
     },
-    [createFolder, folderName]
+    [createFolder, folderName],
   );
 
   return (
@@ -165,7 +202,9 @@ export function AppShell() {
           }}
         />
 
-        <div className={`grid min-h-0 flex-1 gap-3 p-3 ${sidebarVisible ? "grid-cols-[280px_1fr]" : "grid-cols-1"}`}>
+        <div
+          className={`grid min-h-0 flex-1 gap-3 p-3 ${sidebarVisible ? "grid-cols-[320px_1fr]" : "grid-cols-1"}`}
+        >
           {sidebarVisible ? (
             <Sidebar
               onAddConnection={() => {
@@ -192,8 +231,15 @@ export function AppShell() {
                   if (!activeConnection) {
                     return;
                   }
-                  void invoke<FileDialogEntry[]>("inspect_file_paths", { paths }).then(async (entries) => {
-                    await addPathEntries(entries, currentPath, activeConnection.id, activeConnection.bucketName);
+                  void invoke<FileDialogEntry[]>("inspect_file_paths", {
+                    paths,
+                  }).then(async (entries) => {
+                    await addPathEntries(
+                      entries,
+                      currentPath,
+                      activeConnection.id,
+                      activeConnection.bucketName,
+                    );
                     await refresh();
                   });
                 }}
