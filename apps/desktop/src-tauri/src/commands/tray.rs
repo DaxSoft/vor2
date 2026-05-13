@@ -13,11 +13,7 @@ fn show_window(app: &AppHandle) {
 pub fn setup_tray(app: &AppHandle) -> Result<(), String> {
     let open_item = MenuItem::with_id(app, "open", "Open App", true, None::<&str>)
         .map_err(|err| err.to_string())?;
-    let recent_uploads = MenuItem::with_id(app, "recent_uploads", "Recent Uploads", true, None::<&str>)
-        .map_err(|err| err.to_string())?;
     let connections = MenuItem::with_id(app, "connections", "Connections", true, None::<&str>)
-        .map_err(|err| err.to_string())?;
-    let pause_queue = MenuItem::with_id(app, "pause_upload_queue", "Pause Upload Queue", true, None::<&str>)
         .map_err(|err| err.to_string())?;
     let settings = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)
         .map_err(|err| err.to_string())?;
@@ -25,7 +21,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), String> {
 
     let menu = Menu::with_items(
         app,
-        &[&open_item, &recent_uploads, &connections, &pause_queue, &settings, &quit],
+        &[&open_item, &connections, &settings, &quit],
     )
     .map_err(|err| err.to_string())?;
 

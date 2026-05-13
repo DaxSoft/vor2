@@ -143,6 +143,47 @@ body {
   color: #8b2940 !important;
 }
 
+[data-theme="light"] input,
+[data-theme="light"] textarea,
+[data-theme="light"] select {
+  color: #11243e !important;
+}
+
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: #61789a !important;
+}
+
+[data-theme="light"] header button,
+[data-theme="light"] header button svg {
+  color: #11243e !important;
+}
+
+[data-theme="light"] header .text-app-muted,
+[data-theme="light"] header .text-app-soft {
+  color: #3f5f89 !important;
+}
+
+[data-theme="light"] .glass-shell [role="menu"],
+[data-theme="light"] .glass-shell .text-xs,
+[data-theme="light"] .glass-shell button {
+  color: #11243e;
+}
+
+[data-theme="light"] .glass-shell button.text-rose-200 {
+  color: #8b2940 !important;
+}
+
+[data-theme="light"] .glass-panel button,
+[data-theme="light"] .glass-panel button svg {
+  color: #11243e;
+}
+
+[data-theme="light"] .glass-panel .text-app-muted,
+[data-theme="light"] .glass-panel .text-app-soft {
+  color: #4d6486 !important;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(77, 151, 255, 0.7) rgba(255, 255, 255, 0.08);
