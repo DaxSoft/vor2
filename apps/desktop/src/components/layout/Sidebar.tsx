@@ -1,4 +1,11 @@
-import { Database, Folder, FolderPlus, HardDrive, Plus, Settings } from "lucide-react";
+import {
+  Database,
+  Folder,
+  FolderPlus,
+  HardDrive,
+  Plus,
+  Settings,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useConnectionStore } from "@/features/connections/connection.store";
 import { connectionService } from "@/features/connections/connection.service";
@@ -7,32 +14,45 @@ import { formatBytes } from "@/lib/format";
 
 export function Sidebar({
   onAddConnection,
-  onOpenSettings
+  onOpenSettings,
 }: {
   onAddConnection: () => void;
   onOpenSettings: () => void;
 }) {
   const connections = useConnectionStore((state) => state.items);
-  const activeConnectionId = useConnectionStore((state) => state.activeConnectionId);
-  const setActiveConnection = useConnectionStore((state) => state.setActiveConnection);
+  const activeConnectionId = useConnectionStore(
+    (state) => state.activeConnectionId,
+  );
+  const setActiveConnection = useConnectionStore(
+    (state) => state.setActiveConnection,
+  );
   const nodes = useExplorerStore((state) => state.nodes);
   const currentPath = useExplorerStore((state) => state.currentPath);
   const loadPath = useExplorerStore((state) => state.loadPath);
-  const [usage, setUsage] = useState<{ objectCount: number; totalSizeBytes: number; source?: string } | null>(null);
+  const [usage, setUsage] = useState<{
+    objectCount: number;
+    totalSizeBytes: number;
+    source?: string;
+  } | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
 
   const folderNodes = useMemo(
-    () => nodes.filter((node) => node.kind === "folder").sort((a, b) => a.name.localeCompare(b.name)),
-    [nodes]
+    () =>
+      nodes
+        .filter((node) => node.kind === "folder")
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [nodes],
   );
 
   const pathParts = useMemo(
     () => currentPath.replace(/^\//, "").split("/").filter(Boolean),
-    [currentPath]
+    [currentPath],
   );
 
   useEffect(() => {
-    const active = connections.find((connection) => connection.id === activeConnectionId);
+    const active = connections.find(
+      (connection) => connection.id === activeConnectionId,
+    );
     if (!activeConnectionId || !active) {
       setUsage(null);
       return;
@@ -52,15 +72,18 @@ export function Sidebar({
   }, [activeConnectionId, connections]);
 
   return (
-    <aside className="glass-panel grid min-h-0 grid-cols-[36px_1fr] gap-3 rounded-panel border border-app-border/45 p-3">
+    <aside className="glass-panel grid min-h-0 grid-cols-[36px_1fr] gap-3 rounded-panel border border-app-border/20 p-3">
       <div className="flex flex-col items-center justify-between">
         <div className="space-y-2">
-          <button type="button" className="rounded-lg border border-app-border/45 bg-white/[0.04] p-2 text-app-muted hover:text-app-text">
+          <button
+            type="button"
+            className="rounded-lg border border-app-border/20 bg-white/[0.04] p-2 text-app-muted hover:text-app-text"
+          >
             <HardDrive className="h-4 w-4" />
           </button>
           <button
             type="button"
-            className="rounded-lg border border-app-border/45 bg-white/[0.04] p-2 text-app-muted hover:text-app-text"
+            className="rounded-lg border border-app-border/20 bg-white/[0.04] p-2 text-app-muted hover:text-app-text"
             onClick={onAddConnection}
           >
             <Plus className="h-4 w-4" />
@@ -68,7 +91,7 @@ export function Sidebar({
         </div>
         <button
           type="button"
-          className="rounded-lg border border-app-border/45 bg-white/[0.04] p-2 text-app-muted hover:text-app-text"
+          className="rounded-lg border border-app-border/20 bg-white/[0.04] p-2 text-app-muted hover:text-app-text"
           onClick={onOpenSettings}
         >
           <Settings className="h-4 w-4" />
@@ -76,8 +99,8 @@ export function Sidebar({
       </div>
 
       <div className="flex min-h-0 flex-col">
-        <div className="rounded-xl border border-app-border/45 bg-white/[0.04] p-2">
-          <div className="mb-2 rounded-lg border border-app-border/45 bg-white/[0.03] px-2 py-2 text-xs text-app-muted">
+        <div className="rounded-xl border border-app-border/20 bg-white/[0.04] p-2">
+          <div className="mb-2 rounded-lg border border-app-border/20 bg-white/[0.03] px-2 py-2 text-xs text-app-muted">
             All Buckets
           </div>
           <div className="space-y-1.5">
@@ -99,12 +122,12 @@ export function Sidebar({
           </div>
         </div>
 
-        <div className="mt-3 flex min-h-0 flex-1 flex-col rounded-xl border border-app-border/45 bg-white/[0.03] p-2">
+        <div className="mt-3 flex min-h-0 flex-1 flex-col rounded-xl border border-app-border/20 bg-white/[0.03] p-2">
           <div className="mb-2 flex items-center justify-between text-xs text-app-muted">
             <span>Folders</span>
             <button
               type="button"
-              className="rounded-md border border-app-border/45 p-1 hover:text-app-text"
+              className="rounded-md border border-app-border/20 p-1 hover:text-app-text"
               onClick={() => {
                 void loadPath(currentPath);
               }}
@@ -117,7 +140,9 @@ export function Sidebar({
             <button
               type="button"
               className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs ${
-                currentPath === "/" ? "bg-accent-soft text-app-text" : "text-app-muted hover:bg-white/[0.06]"
+                currentPath === "/"
+                  ? "bg-accent-soft text-app-text"
+                  : "text-app-muted hover:bg-white/[0.06]"
               }`}
               onClick={() => {
                 void loadPath("/");
@@ -133,7 +158,9 @@ export function Sidebar({
                   key={path}
                   type="button"
                   className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs ${
-                    currentPath === path ? "bg-accent-soft text-app-text" : "text-app-muted hover:bg-white/[0.06]"
+                    currentPath === path
+                      ? "bg-accent-soft text-app-text"
+                      : "text-app-muted hover:bg-white/[0.06]"
                   }`}
                   style={{ paddingLeft: `${8 + index * 10}px` }}
                   onClick={() => {
@@ -161,16 +188,22 @@ export function Sidebar({
           </div>
         </div>
 
-        <div className="mt-3 rounded-xl border border-app-border/45 bg-white/[0.03] p-3">
+        <div className="mt-3 rounded-xl border border-app-border/20 bg-white/[0.03] p-3">
           <p className="text-xs text-app-muted">Storage Usage</p>
           {usageLoading ? (
             <p className="mt-2 text-xs text-app-soft">Loading...</p>
           ) : usage ? (
             <>
-              <p className="mt-2 text-xs text-app-text">{formatBytes(usage.totalSizeBytes)}</p>
-              <p className="mt-1 text-[11px] text-app-soft">{usage.objectCount} objects</p>
+              <p className="mt-2 text-xs text-app-text">
+                {formatBytes(usage.totalSizeBytes)}
+              </p>
+              <p className="mt-1 text-[11px] text-app-soft">
+                {usage.objectCount} objects
+              </p>
               <p className="mt-2 text-[10px] text-app-soft">
-                {usage.source === "graphql" ? "Cloudflare GraphQL metrics" : "Live bucket scan (R2 API)"}
+                {usage.source === "graphql"
+                  ? "Cloudflare GraphQL metrics"
+                  : "Live bucket scan (R2 API)"}
               </p>
             </>
           ) : (

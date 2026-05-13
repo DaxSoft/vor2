@@ -8,7 +8,7 @@ import {
   RefreshCw,
   Share2,
   Trash2,
-  UploadCloud
+  UploadCloud,
 } from "lucide-react";
 import { buildPublicUrl } from "@r2-explorer/r2/src/path-utils";
 import { Breadcrumb } from "./Breadcrumb";
@@ -49,11 +49,16 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
   const selectNode = useExplorerStore((state) => state.selectNode);
   const renameNode = useExplorerStore((state) => state.renameNode);
   const goParent = useExplorerStore((state) => state.goParent);
-  const activeConnectionId = useConnectionStore((state) => state.activeConnectionId);
+  const activeConnectionId = useConnectionStore(
+    (state) => state.activeConnectionId,
+  );
   const connections = useConnectionStore((state) => state.items);
   const [nodeMenu, setNodeMenu] = useState<NodeContextMenuState | null>(null);
-  const [backgroundMenu, setBackgroundMenu] = useState<BackgroundContextMenuState | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<R2ExplorerNode | null>(null);
+  const [backgroundMenu, setBackgroundMenu] =
+    useState<BackgroundContextMenuState | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<R2ExplorerNode | null>(
+    null,
+  );
   const [message, setMessage] = useState<string | null>(null);
 
   const visibleNodes = useMemo(() => {
@@ -61,15 +66,20 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
     if (!query) {
       return nodes;
     }
-    return nodes.filter((node) => node.name.toLowerCase().includes(query) || node.key.toLowerCase().includes(query));
+    return nodes.filter(
+      (node) =>
+        node.name.toLowerCase().includes(query) ||
+        node.key.toLowerCase().includes(query),
+    );
   }, [nodes, searchQuery]);
 
   const selectedNode = useMemo(
     () => visibleNodes.find((node) => node.id === selectedNodeId),
-    [visibleNodes, selectedNodeId]
+    [visibleNodes, selectedNodeId],
   );
   const selectedFile = selectedNode?.kind === "file" ? selectedNode : null;
-  const activeConnection = connections.find((item) => item.id === activeConnectionId) ?? null;
+  const activeConnection =
+    connections.find((item) => item.id === activeConnectionId) ?? null;
 
   const closeMenus = () => {
     setNodeMenu(null);
@@ -122,7 +132,11 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
       setMessage("No public URL configured for this connection.");
       return;
     }
-    const keys = await explorerService.listPrefixObjects(activeConnectionId, activeConnection.bucketName, node.key);
+    const keys = await explorerService.listPrefixObjects(
+      activeConnectionId,
+      activeConnection.bucketName,
+      node.key,
+    );
     for (const key of keys) {
       const url = buildPublicUrl(activeConnection.publicUrl, key);
       if (!url) {
@@ -130,7 +144,11 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
       }
       window.open(url, "_blank", "noopener,noreferrer");
     }
-    setMessage(keys.length === 0 ? "Folder is empty." : `Opened ${keys.length} file download(s).`);
+    setMessage(
+      keys.length === 0
+        ? "Folder is empty."
+        : `Opened ${keys.length} file download(s).`,
+    );
   };
 
   const buildRenamedKey = (node: R2ExplorerNode, nextName: string): string => {
@@ -164,10 +182,16 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
     }
     await deleteNode(confirmDelete.key);
     setConfirmDelete(null);
-    setMessage(confirmDelete.kind === "folder" ? "Folder and subcontent deleted." : "File deleted.");
+    setMessage(
+      confirmDelete.kind === "folder"
+        ? "Folder and subcontent deleted."
+        : "File deleted.",
+    );
   };
 
-  const runNodeAction = (action: (node: R2ExplorerNode) => Promise<void> | void) => {
+  const runNodeAction = (
+    action: (node: R2ExplorerNode) => Promise<void> | void,
+  ) => {
     const menu = nodeMenu;
     closeMenus();
     if (!menu) {
@@ -184,7 +208,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
   return (
     <div className="grid min-h-0 flex-1 gap-3 grid-cols-[1fr_320px]">
       <section
-        className="glass-panel flex min-h-0 flex-col rounded-panel border border-app-border/45 p-3"
+        className="glass-panel flex min-h-0 flex-col rounded-panel border border-app-border/20 p-3"
         onContextMenu={(event) => {
           const target = event.target as HTMLElement;
           if (target.closest("tbody tr")) {
@@ -195,20 +219,25 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
           setNodeMenu(null);
         }}
       >
-        <div className="mb-3 flex items-center gap-2 border-b border-app-border/45 pb-2">
+        <div className="mb-3 flex items-center gap-2 border-b border-app-border/20 pb-2">
           <button
             type="button"
-            className="rounded-md border border-app-border/45 bg-white/[0.04] p-1 text-app-muted hover:text-app-text"
+            className="rounded-md border border-app-border/20 bg-white/[0.04] p-1 text-app-muted hover:text-app-text"
             onClick={() => {
               void goParent();
             }}
           >
             <ChevronLeft className="h-3.5 w-3.5" />
           </button>
-          <Breadcrumb currentPath={currentPath} onOpen={(path) => void loadPath(path)} />
+          <Breadcrumb
+            currentPath={currentPath}
+            onOpen={(path) => void loadPath(path)}
+          />
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
-          {isLoading ? <p className="text-xs text-app-muted">Loading...</p> : null}
+          {isLoading ? (
+            <p className="text-xs text-app-muted">Loading...</p>
+          ) : null}
           {error ? <p className="text-xs text-rose-300">{error}</p> : null}
           {!isLoading && !error ? (
             <ExplorerTable
@@ -224,14 +253,20 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
             />
           ) : null}
         </div>
-        <div className="mt-2 flex items-center justify-between border-t border-app-border/45 pt-2 text-[11px] text-app-soft">
+        <div className="mt-2 flex items-center justify-between border-t border-app-border/20 pt-2 text-[11px] text-app-soft">
           <span>{visibleNodes.length} items</span>
-          <span>{selectedFile ? `1 selected (${formatBytes(selectedFile.sizeBytes)})` : "0 selected"}</span>
+          <span>
+            {selectedFile
+              ? `1 selected (${formatBytes(selectedFile.sizeBytes)})`
+              : "0 selected"}
+          </span>
         </div>
-        {message ? <p className="mt-1 text-[11px] text-app-soft">{message}</p> : null}
+        {message ? (
+          <p className="mt-1 text-[11px] text-app-soft">{message}</p>
+        ) : null}
       </section>
 
-      <aside className="glass-panel rounded-panel border border-app-border/45 p-3">
+      <aside className="glass-panel rounded-panel border border-app-border/20 p-3">
         {selectedFile ? (
           <DetailsPanel
             node={selectedFile}
@@ -254,19 +289,31 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
         >
           {nodeMenu.node.kind === "file" ? (
             <>
-              <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10" onClick={() => runNodeAction(copyUrl)}>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+                onClick={() => runNodeAction(copyUrl)}
+              >
                 <Copy className="h-3.5 w-3.5 text-app-muted" />
                 Copy URL
               </button>
-              <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10" onClick={() => runNodeAction(shareNode)}>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+                onClick={() => runNodeAction(shareNode)}
+              >
                 <Share2 className="h-3.5 w-3.5 text-app-muted" />
                 Share
               </button>
-              <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10" onClick={() => runNodeAction(downloadNode)}>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+                onClick={() => runNodeAction(downloadNode)}
+              >
                 <Download className="h-3.5 w-3.5 text-app-muted" />
                 Download
               </button>
-              <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10" onClick={() => runNodeAction(rename)}>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+                onClick={() => runNodeAction(rename)}
+              >
                 <PencilLine className="h-3.5 w-3.5 text-app-muted" />
                 Rename
               </button>
@@ -284,11 +331,17 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
             </>
           ) : (
             <>
-              <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10" onClick={() => runNodeAction(downloadNode)}>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+                onClick={() => runNodeAction(downloadNode)}
+              >
                 <Download className="h-3.5 w-3.5 text-app-muted" />
                 Download
               </button>
-              <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10" onClick={() => runNodeAction(rename)}>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
+                onClick={() => runNodeAction(rename)}
+              >
                 <PencilLine className="h-3.5 w-3.5 text-app-muted" />
                 Rename
               </button>
@@ -316,7 +369,9 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
         >
           <button
             className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/10"
-            onClick={() => runBackgroundAction(async () => loadPath(currentPath))}
+            onClick={() =>
+              runBackgroundAction(async () => loadPath(currentPath))
+            }
           >
             <RefreshCw className="h-3.5 w-3.5 text-app-muted" />
             Refresh
@@ -341,15 +396,22 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
       {confirmDelete ? (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/45 p-4">
           <div className="glass-shell w-full max-w-md rounded-app p-5">
-            <h3 className="text-sm font-semibold text-app-text">Confirm delete</h3>
+            <h3 className="text-sm font-semibold text-app-text">
+              Confirm delete
+            </h3>
             <p className="mt-2 text-xs text-app-muted break-all">
               {confirmDelete.kind === "folder"
                 ? "Delete this folder and all files/subfolders inside?"
                 : "Delete this file?"}
             </p>
-            <p className="mt-1 text-[11px] text-app-soft break-all">{confirmDelete.key}</p>
+            <p className="mt-1 text-[11px] text-app-soft break-all">
+              {confirmDelete.key}
+            </p>
             <div className="mt-4 flex justify-end gap-2">
-              <button className="rounded border border-app-border/45 px-3 py-1.5 text-xs" onClick={() => setConfirmDelete(null)}>
+              <button
+                className="rounded border border-app-border/20 px-3 py-1.5 text-xs"
+                onClick={() => setConfirmDelete(null)}
+              >
                 Cancel
               </button>
               <button

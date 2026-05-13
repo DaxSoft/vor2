@@ -162,7 +162,10 @@ export function AppShell() {
   );
 
   return (
-    <div className="h-screen w-screen overflow-hidden text-[#f5f8ff] app-background">
+    <div
+      data-tauri-drag-region
+      className="h-screen w-screen overflow-hidden text-[#f5f8ff] app-background"
+    >
       <div className="mx-4 my-4 flex h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-app glass-shell">
         <TitleBar
           search={search}

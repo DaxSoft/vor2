@@ -1,7 +1,7 @@
 export function UploadDropzone({
   onPickFiles,
   onDropPaths,
-  targetPath
+  targetPath,
 }: {
   onPickFiles: () => void;
   onDropPaths?: (paths: string[]) => void;
@@ -9,7 +9,7 @@ export function UploadDropzone({
 }) {
   return (
     <div
-      className="rounded-lg border border-dashed border-app-border/45 bg-white/[0.04] px-3 py-3 text-xs text-app-muted"
+      className="rounded-lg border border-dashed border-app-border/20 bg-white/[0.04] px-3 py-3 text-xs text-app-muted"
       onDragOver={(event) => {
         event.preventDefault();
       }}
@@ -26,9 +26,16 @@ export function UploadDropzone({
     >
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p>Drag and drop files or folders to upload to <span className="text-accent">{targetPath ?? "/"}</span></p>
+          <p>
+            Drag and drop files or folders to upload to{" "}
+            <span className="text-accent">{targetPath ?? "/"}</span>
+          </p>
         </div>
-        <button type="button" className="rounded border border-app-border/45 bg-white/[0.05] px-2 py-1 text-[11px] text-app-text" onClick={onPickFiles}>
+        <button
+          type="button"
+          className="rounded border border-app-border/20 bg-white/[0.05] px-2 py-1 text-[11px] text-app-text"
+          onClick={onPickFiles}
+        >
           Select Files
         </button>
       </div>

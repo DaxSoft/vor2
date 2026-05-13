@@ -18,7 +18,7 @@ export function UploadRow({
   task,
   onPause,
   onCancel,
-  onRetry
+  onRetry,
 }: {
   task: UploadTask;
   onPause: () => void;
@@ -27,7 +27,9 @@ export function UploadRow({
 }) {
   const remainingBytes = Math.max(task.sizeBytes - task.uploadedBytes, 0);
   const speedLabel =
-    task.speedBytesPerSecond > 0 ? `${formatBytes(task.speedBytesPerSecond)}/s` : "--";
+    task.speedBytesPerSecond > 0
+      ? `${formatBytes(task.speedBytesPerSecond)}/s`
+      : "--";
   const etaSeconds =
     task.status === "completed"
       ? 0
@@ -37,13 +39,16 @@ export function UploadRow({
   const etaLabel = Number.isFinite(etaSeconds) ? formatEta(etaSeconds) : "--";
 
   return (
-    <div className="rounded-lg border border-app-border/45 bg-white/[0.04] p-2">
+    <div className="rounded-lg border border-app-border/20 bg-white/[0.04] p-2">
       <div className="mb-1 flex items-center justify-between text-xs">
         <span className="truncate text-app-text">{task.fileName}</span>
         <span className="text-app-muted">{Math.round(task.progress)}%</span>
       </div>
       <div className="h-2 overflow-hidden rounded bg-white/10">
-        <div className="h-full bg-[linear-gradient(90deg,#2488ff,#5aa7ff)]" style={{ width: `${task.progress}%` }} />
+        <div
+          className="h-full bg-[linear-gradient(90deg,#2488ff,#5aa7ff)]"
+          style={{ width: `${task.progress}%` }}
+        />
       </div>
       <div className="mt-1 flex items-center justify-between text-[11px] text-app-soft">
         <span>
@@ -56,16 +61,30 @@ export function UploadRow({
         <span>ETA: {etaLabel}</span>
       </div>
       <div className="mt-2 flex justify-end gap-2 text-[11px]">
-        <button type="button" className="rounded border border-app-border/45 bg-white/[0.04] px-2 py-1" onClick={onPause}>
+        <button
+          type="button"
+          className="rounded border border-app-border/20 bg-white/[0.04] px-2 py-1"
+          onClick={onPause}
+        >
           <Pause className="h-3 w-3" />
         </button>
-        <button type="button" className="rounded border border-app-border/45 bg-white/[0.04] px-2 py-1" onClick={onCancel}>
+        <button
+          type="button"
+          className="rounded border border-app-border/20 bg-white/[0.04] px-2 py-1"
+          onClick={onCancel}
+        >
           <XCircle className="h-3 w-3" />
         </button>
-        <button type="button" className="rounded border border-app-border/45 bg-white/[0.04] px-2 py-1" onClick={onRetry}>
+        <button
+          type="button"
+          className="rounded border border-app-border/20 bg-white/[0.04] px-2 py-1"
+          onClick={onRetry}
+        >
           <RotateCcw className="h-3 w-3" />
         </button>
-        {task.status === "completed" ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : null}
+        {task.status === "completed" ? (
+          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+        ) : null}
       </div>
     </div>
   );

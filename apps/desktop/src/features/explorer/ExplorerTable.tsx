@@ -8,7 +8,7 @@ export function ExplorerTable({
   selectedNodeId,
   onSelect,
   onOpen,
-  onContextMenu
+  onContextMenu,
 }: {
   nodes: R2ExplorerNode[];
   selectedNodeId: string | null;
@@ -19,7 +19,7 @@ export function ExplorerTable({
   return (
     <table className="w-full table-fixed text-left text-[13px]">
       <thead>
-        <tr className="border-b border-app-border/45 text-xs font-semibold text-app-muted">
+        <tr className="border-b border-app-border/20 text-xs font-semibold text-app-muted">
           <th className="px-3 py-2">Name</th>
           <th className="px-3 py-2">Type</th>
           <th className="px-3 py-2">Size</th>
@@ -50,15 +50,23 @@ export function ExplorerTable({
                 <span className="truncate">{node.name}</span>
               </div>
             </td>
-            <td className="px-3 py-2 text-app-muted">{node.kind === "folder" ? "Folder" : node.mimeType ?? "File"}</td>
             <td className="px-3 py-2 text-app-muted">
-              {node.kind === "file" ? formatBytes(node.sizeBytes) : formatBytes(node.totalSizeBytes ?? 0)}
+              {node.kind === "folder" ? "Folder" : (node.mimeType ?? "File")}
             </td>
-            <td className="px-3 py-2 text-app-muted">{node.kind === "file" ? formatDate(node.lastModified) : "-"}</td>
+            <td className="px-3 py-2 text-app-muted">
+              {node.kind === "file"
+                ? formatBytes(node.sizeBytes)
+                : formatBytes(node.totalSizeBytes ?? 0)}
+            </td>
+            <td className="px-3 py-2 text-app-muted">
+              {node.kind === "file" ? formatDate(node.lastModified) : "-"}
+            </td>
             <td className="px-3 py-2 text-app-muted">
               {node.kind === "file" ? (
                 <span className="inline-flex items-center gap-1.5">
-                  <span className={`h-1.5 w-1.5 rounded-full ${node.isPublic ? "bg-emerald-400" : "bg-slate-500"}`} />
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${node.isPublic ? "bg-emerald-400" : "bg-slate-500"}`}
+                  />
                   {node.isPublic ? "Public" : "Private"}
                 </span>
               ) : (
