@@ -17,10 +17,10 @@ export function UploadQueue({ onPickFiles, onDropPaths }: { onPickFiles: () => v
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-app-text">Upload Queue ({tasks.length})</h3>
         <div className="flex items-center gap-2">
-          <button type="button" className="rounded-md border border-app-border/70 bg-white/[0.04] px-2 py-1 text-xs text-app-muted hover:text-app-text" onClick={clearCompleted}>
+          <button type="button" className="rounded-md border border-app-border/45 bg-white/[0.04] px-2 py-1 text-xs text-app-muted hover:text-app-text" onClick={clearCompleted}>
             Clear Completed
           </button>
-          <button type="button" className="rounded-md border border-app-border/70 bg-white/[0.04] p-1 text-xs text-app-muted hover:text-app-text" onClick={() => setQueueVisible(false)}>
+          <button type="button" className="rounded-md border border-app-border/45 bg-white/[0.04] p-1 text-xs text-app-muted hover:text-app-text" onClick={() => setQueueVisible(false)}>
             <ChevronUp className="h-3.5 w-3.5" />
           </button>
         </div>

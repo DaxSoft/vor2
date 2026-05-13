@@ -104,7 +104,7 @@ export function Sidebar({
             <span>Folders</span>
             <button
               type="button"
-              className="rounded-md border border-app-border/70 p-1 hover:text-app-text"
+              className="rounded-md border border-app-border/45 p-1 hover:text-app-text"
               onClick={() => {
                 void loadPath(currentPath);
               }}

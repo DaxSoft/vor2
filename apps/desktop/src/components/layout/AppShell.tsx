@@ -15,7 +15,6 @@ import { bindTrayEvents } from "@/features/tray/tray.events";
 import {
   closeToTray,
   minimizeWindow,
-  startDraggingWindow,
   toggleMaximizeWindow,
 } from "@/lib/desktop-window";
 
@@ -196,9 +195,6 @@ export function AppShell() {
           }}
           onClose={() => {
             void closeToTray();
-          }}
-          onStartDragging={() => {
-            void startDraggingWindow();
           }}
         />
 

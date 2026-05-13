@@ -54,7 +54,7 @@ export function DetailsPanel({ node, onDelete }: { node: R2FileNode; onDelete: (
       </div>
 
       {node.publicUrl && (isImage || isAudio || isVideo) ? (
-        <div className="mb-3 rounded-lg border border-app-border/80 bg-black/20 p-2">
+        <div className="mb-3 rounded-lg border border-app-border/45 bg-black/20 p-2">
           {isImage ? <img src={node.publicUrl} alt={node.name} className="max-h-40 w-full rounded object-cover" /> : null}
           {isAudio ? <audio controls src={node.publicUrl} className="w-full" /> : null}
           {isVideo ? <video controls src={node.publicUrl} className="max-h-48 w-full rounded" /> : null}
@@ -75,7 +75,7 @@ export function DetailsPanel({ node, onDelete }: { node: R2FileNode; onDelete: (
         </span>
       </div>
 
-      <div className="space-y-2 border-y border-app-border/70 py-3 text-app-muted">
+      <div className="space-y-2 border-y border-app-border/45 py-3 text-app-muted">
         <div className="flex items-center justify-between gap-2">
           <span>Size</span>
           <span className="text-right text-app-text">{formatBytes(node.sizeBytes)}</span>
@@ -106,21 +106,21 @@ export function DetailsPanel({ node, onDelete }: { node: R2FileNode; onDelete: (
       <div className="mt-3 grid grid-cols-2 gap-2">
         <button
           type="button"
-          className="rounded-lg border border-accent/40 bg-accent-soft px-2 py-1.5 text-left text-app-text"
+          className="rounded-lg border border-app-border/45 bg-accent-soft px-2 py-1.5 text-left text-app-text"
           onClick={() => void copyUrl()}
         >
           <Copy className="mr-1 inline h-3 w-3" />
           Copy URL
         </button>
-        <button type="button" className="rounded-lg border border-app-border bg-white/[0.05] px-2 py-1.5 text-left" onClick={() => void shareUrl()}>
+        <button type="button" className="rounded-lg border border-app-border/45 bg-white/[0.05] px-2 py-1.5 text-left" onClick={() => void shareUrl()}>
           <Share2 className="mr-1 inline h-3 w-3" />
           Share
         </button>
       </div>
 
-      <div className="mt-3 border-t border-app-border/70 pt-3">
+      <div className="mt-3 border-t border-app-border/45 pt-3">
         <p className="mb-2 text-[11px] font-semibold text-app-muted">Actions</p>
-        <button type="button" className="mb-2 flex w-full items-center gap-2 rounded-lg border border-app-border bg-white/[0.05] px-2 py-2 text-left" onClick={download}>
+        <button type="button" className="mb-2 flex w-full items-center gap-2 rounded-lg border border-app-border/45 bg-white/[0.05] px-2 py-2 text-left" onClick={download}>
           <Download className="h-3.5 w-3.5" />
           Download
         </button>

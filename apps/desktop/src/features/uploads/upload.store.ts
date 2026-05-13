@@ -12,6 +12,7 @@ export const useUploadStore = create<UploadStoreState>((set, get) => ({
     set({ isQueueVisible: visible });
   },
   async addPathEntries(entries, targetPath, connectionId, bucketName) {
+    const startedAt = new Date();
     const tasks = entries.map((entry) => ({
       id: `${Date.now()}-${entry.fileName}`,
       connectionId,
@@ -23,23 +24,34 @@ export const useUploadStore = create<UploadStoreState>((set, get) => ({
       uploadedBytes: 0,
       progress: 0,
       speedBytesPerSecond: 0,
-      status: "queued" as const
+      status: "uploading" as const,
+      startedAt
     }));
 
     set({ tasks: [...get().tasks, ...tasks], isQueueVisible: true });
 
     try {
       await uploadService.enqueueUploads(connectionId, bucketName, targetPath, entries);
+      const completedAt = new Date();
+      const elapsedSeconds = Math.max(1, (completedAt.getTime() - startedAt.getTime()) / 1000);
       set({
         tasks: get().tasks.map((item) =>
-          tasks.some((task) => task.id === item.id) ? updateUploadProgress(item, item.sizeBytes, item.sizeBytes) : item
+          tasks.some((task) => task.id === item.id)
+            ? {
+                ...updateUploadProgress(item, item.sizeBytes, item.sizeBytes),
+                speedBytesPerSecond: item.sizeBytes / elapsedSeconds,
+                completedAt
+              }
+            : item
         )
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Upload failed";
       set({
         tasks: get().tasks.map((item) =>
-          tasks.some((task) => task.id === item.id) ? { ...item, status: "failed", errorMessage: message } : item
+          tasks.some((task) => task.id === item.id)
+            ? { ...item, status: "failed", speedBytesPerSecond: 0, errorMessage: message }
+            : item
         )
       });
     }
@@ -69,9 +81,21 @@ export const useUploadStore = create<UploadStoreState>((set, get) => ({
     if (!task) {
       return;
     }
+    const startedAt = new Date();
     set({
       tasks: get().tasks.map((item) =>
-        item.id === taskId ? { ...item, status: "queued", progress: 0, uploadedBytes: 0, errorMessage: undefined } : item
+        item.id === taskId
+          ? {
+              ...item,
+              status: "uploading",
+              progress: 0,
+              uploadedBytes: 0,
+              speedBytesPerSecond: 0,
+              startedAt,
+              completedAt: undefined,
+              errorMessage: undefined
+            }
+          : item
       )
     });
     try {
@@ -79,8 +103,18 @@ export const useUploadStore = create<UploadStoreState>((set, get) => ({
       await uploadService.enqueueUploads(task.connectionId, task.bucketName, targetPath, [
         { path: task.sourcePath, fileName: task.fileName, sizeBytes: task.sizeBytes }
       ]);
+      const completedAt = new Date();
+      const elapsedSeconds = Math.max(1, (completedAt.getTime() - startedAt.getTime()) / 1000);
       set({
-        tasks: get().tasks.map((item) => (item.id === taskId ? updateUploadProgress(item, item.sizeBytes, item.sizeBytes) : item))
+        tasks: get().tasks.map((item) =>
+          item.id === taskId
+            ? {
+                ...updateUploadProgress(item, item.sizeBytes, item.sizeBytes),
+                speedBytesPerSecond: item.sizeBytes / elapsedSeconds,
+                completedAt
+              }
+            : item
+        )
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Upload failed";

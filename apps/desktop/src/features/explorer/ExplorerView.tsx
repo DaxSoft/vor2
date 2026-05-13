@@ -195,10 +195,10 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
           setNodeMenu(null);
         }}
       >
-        <div className="mb-3 flex items-center gap-2 border-b border-app-border/60 pb-2">
+        <div className="mb-3 flex items-center gap-2 border-b border-app-border/45 pb-2">
           <button
             type="button"
-            className="rounded-md border border-app-border/70 bg-white/[0.04] p-1 text-app-muted hover:text-app-text"
+            className="rounded-md border border-app-border/45 bg-white/[0.04] p-1 text-app-muted hover:text-app-text"
             onClick={() => {
               void goParent();
             }}
@@ -224,7 +224,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
             />
           ) : null}
         </div>
-        <div className="mt-2 flex items-center justify-between border-t border-app-border/60 pt-2 text-[11px] text-app-soft">
+        <div className="mt-2 flex items-center justify-between border-t border-app-border/45 pt-2 text-[11px] text-app-soft">
           <span>{visibleNodes.length} items</span>
           <span>{selectedFile ? `1 selected (${formatBytes(selectedFile.sizeBytes)})` : "0 selected"}</span>
         </div>
@@ -349,7 +349,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
             </p>
             <p className="mt-1 text-[11px] text-app-soft break-all">{confirmDelete.key}</p>
             <div className="mt-4 flex justify-end gap-2">
-              <button className="rounded border border-app-border px-3 py-1.5 text-xs" onClick={() => setConfirmDelete(null)}>
+              <button className="rounded border border-app-border/45 px-3 py-1.5 text-xs" onClick={() => setConfirmDelete(null)}>
                 Cancel
               </button>
               <button
