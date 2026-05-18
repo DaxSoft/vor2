@@ -64,7 +64,7 @@ export function TitleBar({
       }}
     >
       <div data-tauri-drag-region className="flex items-center gap-2">
-        <img src={logoMark} alt="vor2" className="h-4 w-4" />
+        <img src={logoMark} alt="vor2" className="h-8 w-8" />
         <span
           data-tauri-drag-region
           className="text-sm font-semibold text-app-text"
