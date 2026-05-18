@@ -1,5 +1,5 @@
 {
-  "name": "@r2-explorer/auth",
+  "name": "@vor2/auth",
   "version": "0.1.0",
   "private": true,
   "type": "module",

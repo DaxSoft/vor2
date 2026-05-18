@@ -21,6 +21,18 @@ interface PresignedUrlResult {
   expiresAt: string;
 }
 
+export interface SearchObjectsInput {
+  pattern?: string;
+  useRegex: boolean;
+  scope: "current" | "anywhere";
+  path: string;
+  sizeMode: "any" | "less" | "more";
+  sizeBytes?: number;
+  fromDate?: string;
+  toDate?: string;
+  quickFilter?: string;
+}
+
 export const explorerService = {
   async browse(connectionId: string, bucketName: string, path: string, publicUrl?: string): Promise<R2ExplorerNode[]> {
     const result = await invoke<ExplorerListingResult>("browse_folder", {
@@ -81,6 +93,33 @@ export const explorerService = {
       oldPrefix,
       newPrefix
     });
+  },
+
+  async moveObject(connectionId: string, bucketName: string, oldKey: string, newKey: string): Promise<void> {
+    await invoke("move_object", {
+      connectionId,
+      bucketName,
+      oldKey,
+      newKey
+    });
+  },
+
+  async movePrefix(connectionId: string, bucketName: string, oldPrefix: string, newPrefix: string): Promise<void> {
+    await invoke("move_prefix", {
+      connectionId,
+      bucketName,
+      oldPrefix,
+      newPrefix
+    });
+  },
+
+  async search(connectionId: string, bucketName: string, input: SearchObjectsInput, publicUrl?: string): Promise<R2ExplorerNode[]> {
+    const result = await invoke<ExplorerListingResult>("search_objects", {
+      connectionId,
+      bucketName,
+      input
+    });
+    return mapListingToNodes(result, publicUrl);
   },
 
   async createPresignedGetUrl(

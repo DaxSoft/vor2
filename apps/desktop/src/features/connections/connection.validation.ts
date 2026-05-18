@@ -7,8 +7,11 @@ export function validateConnectionInput(input: R2ConnectionCreateInput): string 
   if (!input.bucketName.trim()) {
     return "Bucket name is required.";
   }
-  if (!input.endpoint.trim()) {
+  if (input.provider === "r2" && !input.endpoint.trim()) {
     return "Endpoint is required.";
+  }
+  if (input.provider === "s3" && !input.region.trim()) {
+    return "Region is required for S3.";
   }
   if (!input.accessKeyId.trim() || !input.secretAccessKey.trim()) {
     return "Access Key ID and Secret Access Key are required.";

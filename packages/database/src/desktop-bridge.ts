@@ -78,7 +78,7 @@ function deleteMasterKey(userId: string): void {
 }
 
 function deriveKey(masterKey: Buffer, userId: string, connectionId: string): Buffer {
-  return crypto.hkdfSync("sha256", masterKey, Buffer.alloc(0), Buffer.from(`${userId}:${connectionId}`), 32);
+  return Buffer.from(crypto.hkdfSync("sha256", masterKey, Buffer.alloc(0), Buffer.from(`${userId}:${connectionId}`), 32));
 }
 
 function encryptSecret(masterKey: Buffer, userId: string, connectionId: string, value: string): { ciphertext: string; iv: string; tag: string } {
@@ -98,17 +98,41 @@ function decryptSecret(masterKey: Buffer, userId: string, connectionId: string, 
   return plaintext.toString("utf8");
 }
 
-function makeClient(endpoint: string, region: string, accessKeyId: string, secretAccessKey: string): S3Client {
+type ConnectionProvider = "r2" | "s3";
+
+function normalizeProvider(value: unknown): ConnectionProvider {
+  return String(value ?? "r2").toLowerCase() === "s3" ? "s3" : "r2";
+}
+
+function normalizeEndpoint(provider: ConnectionProvider, endpoint: string, region: string): string {
+  const endpointRaw = endpoint.trim().replace(/\/+$/, "");
+  if (endpointRaw) {
+    return endpointRaw.startsWith("http://") || endpointRaw.startsWith("https://") ? endpointRaw : `https://${endpointRaw}`;
+  }
+  if (provider === "s3") {
+    const resolvedRegion = region.trim() || "us-east-1";
+    return `https://s3.${resolvedRegion}.amazonaws.com`;
+  }
+  return "";
+}
+
+function makeClient(
+  provider: ConnectionProvider,
+  endpoint: string,
+  region: string,
+  accessKeyId: string,
+  secretAccessKey: string
+): S3Client {
   return new S3Client({
     endpoint,
     region,
-    forcePathStyle: true,
+    forcePathStyle: provider === "r2",
     credentials: { accessKeyId, secretAccessKey }
   });
 }
 
-async function listAllObjects(client: S3Client, bucket: string, prefix: string): Promise<Array<{ key: string; size: number }>> {
-  const items: Array<{ key: string; size: number }> = [];
+async function listAllObjects(client: S3Client, bucket: string, prefix: string): Promise<Array<{ key: string; size: number; lastModified?: Date; etag?: string; storageClass?: string }>> {
+  const items: Array<{ key: string; size: number; lastModified?: Date; etag?: string; storageClass?: string }> = [];
   let continuationToken: string | undefined;
 
   do {
@@ -126,7 +150,10 @@ async function listAllObjects(client: S3Client, bucket: string, prefix: string):
       }
       items.push({
         key: item.Key,
-        size: Number(item.Size ?? 0)
+        size: Number(item.Size ?? 0),
+        lastModified: item.LastModified,
+        etag: item.ETag,
+        storageClass: item.StorageClass
       });
     }
 
@@ -256,6 +283,7 @@ async function ensureTables(): Promise<void> {
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  await addColumnIfMissing("r2_connections", "provider", "TEXT NOT NULL DEFAULT 'r2'");
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS app_settings (
       user_id TEXT PRIMARY KEY,
@@ -293,6 +321,27 @@ async function ensureTables(): Promise<void> {
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS sync_folders (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      connection_id TEXT NOT NULL,
+      local_path TEXT NOT NULL,
+      target_prefix TEXT NOT NULL DEFAULT '',
+      last_snapshot TEXT NOT NULL DEFAULT '{}',
+      enabled INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
+async function addColumnIfMissing(table: string, column: string, definition: string): Promise<void> {
+  const columns = await prisma.$queryRawUnsafe<Array<{ name: string }>>(`PRAGMA table_info(${table})`);
+  if (columns.some((item) => item.name === column)) {
+    return;
+  }
+  await prisma.$executeRawUnsafe(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
 }
 
 async function run(action: string, payload: Json): Promise<unknown> {
@@ -367,7 +416,7 @@ async function run(action: string, payload: Json): Promise<unknown> {
     case "list_connections": {
       const userId = await currentUserId();
       return prisma.$queryRawUnsafe(
-        `SELECT id, name, bucket_name as bucketName, endpoint, public_url as publicUrl, region, status, last_connected_at as lastConnectedAt, last_selected_path as lastSelectedPath
+        `SELECT id, provider, name, bucket_name as bucketName, endpoint, public_url as publicUrl, region, status, last_connected_at as lastConnectedAt, last_selected_path as lastSelectedPath
          FROM r2_connections WHERE user_id = ? ORDER BY created_at ASC`,
         userId
       );
@@ -386,14 +435,17 @@ async function run(action: string, payload: Json): Promise<unknown> {
       const userId = await currentUserId();
       const input = payload.input as Record<string, string | undefined>;
       const connectionId = `conn-${Date.now()}`;
-      const endpointRaw = String(input.endpoint ?? "").trim().replace(/\/+$/, "");
-      const endpoint = endpointRaw.startsWith("http://") || endpointRaw.startsWith("https://") ? endpointRaw : `https://${endpointRaw}`;
-      const region = String(input.region ?? "auto").trim() || "auto";
+      const provider = normalizeProvider(input.provider);
+      const region = String(input.region ?? (provider === "s3" ? "us-east-1" : "auto")).trim() || (provider === "s3" ? "us-east-1" : "auto");
+      const endpoint = normalizeEndpoint(provider, String(input.endpoint ?? ""), region);
+      if (!endpoint) {
+        throw new Error("Endpoint is required.");
+      }
       const bucketName = String(input.bucketName ?? "");
       const accessKeyId = String(input.accessKeyId ?? "");
       const secretAccessKey = String(input.secretAccessKey ?? "");
 
-      const client = makeClient(endpoint, region, accessKeyId, secretAccessKey);
+      const client = makeClient(provider, endpoint, region, accessKeyId, secretAccessKey);
       await client.send(new ListObjectsV2Command({ Bucket: bucketName, MaxKeys: 1 }));
 
       const masterKey = getOrCreateMasterKey(userId);
@@ -402,14 +454,15 @@ async function run(action: string, payload: Json): Promise<unknown> {
 
       await prisma.$executeRawUnsafe(
         `INSERT INTO r2_connections (
-          id, user_id, name, account_id, bucket_name, endpoint, public_url, region,
+          id, user_id, provider, name, account_id, bucket_name, endpoint, public_url, region,
           encrypted_access_key_id, encrypted_secret_access_key,
           encrypted_access_key_iv, encrypted_access_key_tag,
           encrypted_secret_access_key_iv, encrypted_secret_access_key_tag,
           encryption_iv, encryption_tag, encryption_version, status, last_selected_path
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'ACTIVE', '/')`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'ACTIVE', '/')`,
         connectionId,
         userId,
+        provider,
         String(input.name ?? ""),
         input.accountId ?? null,
         bucketName,
@@ -434,6 +487,7 @@ async function run(action: string, payload: Json): Promise<unknown> {
 
       return {
         id: connectionId,
+        provider,
         name: String(input.name ?? ""),
         bucketName,
         endpoint,
@@ -449,8 +503,11 @@ async function run(action: string, payload: Json): Promise<unknown> {
     case "delete_object":
     case "delete_prefix":
     case "list_prefix_objects":
+    case "move_object":
+    case "move_prefix":
     case "rename_object":
     case "rename_prefix":
+    case "search_objects":
     case "get_bucket_usage":
     case "create_presigned_get_url": {
       const userId = await currentUserId();
@@ -458,6 +515,7 @@ async function run(action: string, payload: Json): Promise<unknown> {
       const rows = await prisma.$queryRawUnsafe<
         Array<{
           account_id: string | null;
+          provider: string | null;
           endpoint: string;
           region: string;
           encrypted_access_key_id: string;
@@ -470,7 +528,7 @@ async function run(action: string, payload: Json): Promise<unknown> {
           encryption_tag: string;
         }>
       >(
-        `SELECT account_id, endpoint, region, encrypted_access_key_id, encrypted_secret_access_key,
+        `SELECT account_id, provider, endpoint, region, encrypted_access_key_id, encrypted_secret_access_key,
                 encrypted_access_key_iv, encrypted_access_key_tag,
                 encrypted_secret_access_key_iv, encrypted_secret_access_key_tag,
                 encryption_iv, encryption_tag
@@ -497,7 +555,8 @@ async function run(action: string, payload: Json): Promise<unknown> {
         row.encrypted_secret_access_key_iv || row.encryption_iv,
         row.encrypted_secret_access_key_tag || row.encryption_tag
       );
-      const client = makeClient(row.endpoint, row.region, accessKeyId, secretAccessKey);
+      const provider = normalizeProvider(row.provider);
+      const client = makeClient(provider, row.endpoint, row.region, accessKeyId, secretAccessKey);
 
       if (action === "create_folder") {
         const pathValue = String(payload.path ?? "").replace(/^\/+|\/+$/g, "");
@@ -541,7 +600,7 @@ async function run(action: string, payload: Json): Promise<unknown> {
         return { keys: objects.map((object) => object.key) };
       }
 
-      if (action === "rename_object") {
+      if (action === "rename_object" || action === "move_object") {
         const oldKey = String(payload.oldKey ?? "").replace(/^\/+/, "");
         const newKey = String(payload.newKey ?? "").replace(/^\/+/, "");
         if (!oldKey || !newKey) {
@@ -558,7 +617,7 @@ async function run(action: string, payload: Json): Promise<unknown> {
         return null;
       }
 
-      if (action === "rename_prefix") {
+      if (action === "rename_prefix" || action === "move_prefix") {
         const oldPrefixRaw = String(payload.oldPrefix ?? "").replace(/^\/+/, "");
         const newPrefixRaw = String(payload.newPrefix ?? "").replace(/^\/+/, "");
         const oldPrefix = oldPrefixRaw.endsWith("/") ? oldPrefixRaw : `${oldPrefixRaw}/`;
@@ -585,7 +644,7 @@ async function run(action: string, payload: Json): Promise<unknown> {
       }
 
       if (action === "get_bucket_usage") {
-        if (row.account_id) {
+        if (provider === "r2" && row.account_id) {
           const usage = await getGraphQlBucketUsage(row.account_id, String(payload.bucketName));
           if (usage) {
             return { ...usage, source: "graphql" };
@@ -597,6 +656,54 @@ async function run(action: string, payload: Json): Promise<unknown> {
           objectCount: objects.length,
           totalSizeBytes,
           source: "scan"
+        };
+      }
+
+      if (action === "search_objects") {
+        const scope = String(payload.scope ?? "current");
+        const basePath = String(payload.path ?? "").replace(/^\/+|\/+$/g, "");
+        const prefix = scope === "anywhere" || !basePath ? "" : `${basePath}/`;
+        const pattern = String(payload.pattern ?? "").trim();
+        const useRegex = Boolean(payload.useRegex);
+        const sizeMode = String(payload.sizeMode ?? "any");
+        const sizeBytes = Number(payload.sizeBytes ?? 0);
+        const fromDate = payload.fromDate ? new Date(String(payload.fromDate)) : null;
+        const toDate = payload.toDate ? new Date(String(payload.toDate)) : null;
+        const quickFilter = String(payload.quickFilter ?? "all");
+        const matcher = useRegex && pattern ? new RegExp(pattern, "i") : null;
+        const objects = await listAllObjects(client, String(payload.bucketName), prefix);
+        const extensionMatches = (key: string, extensions: string[]) => extensions.some((extension) => key.toLowerCase().endsWith(extension));
+        const filtered = objects.filter((object) => {
+          const name = object.key.split("/").pop() ?? object.key;
+          if (matcher && !matcher.test(object.key) && !matcher.test(name)) return false;
+          if (!matcher && pattern && !object.key.toLowerCase().includes(pattern.toLowerCase()) && !name.toLowerCase().includes(pattern.toLowerCase())) return false;
+          if (sizeBytes > 0 && sizeMode === "less" && object.size >= sizeBytes) return false;
+          if (sizeBytes > 0 && sizeMode === "more" && object.size <= sizeBytes) return false;
+          const time = object.lastModified?.getTime();
+          if (fromDate && Number.isFinite(fromDate.getTime()) && time && time < fromDate.getTime()) return false;
+          if (toDate && Number.isFinite(toDate.getTime()) && time && time > toDate.getTime()) return false;
+          if (quickFilter === "images" && !extensionMatches(object.key, [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif"])) return false;
+          if (quickFilter === "documents" && !extensionMatches(object.key, [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".md"])) return false;
+          if (quickFilter === "videos" && !extensionMatches(object.key, [".mp4", ".mov", ".mkv", ".webm", ".avi"])) return false;
+          if (quickFilter === "archives" && !extensionMatches(object.key, [".zip", ".rar", ".7z", ".tar", ".gz"])) return false;
+          if (quickFilter === "large" && object.size <= 10 * 1024 * 1024) return false;
+          if (quickFilter === "last7") {
+            const cutoff = Date.now() - 7 * 86400000;
+            if (!time || time < cutoff) return false;
+          }
+          return true;
+        });
+        return {
+          folders: [],
+          files: filtered.map((item) => ({
+            key: item.key,
+            name: item.key.split("/").pop() ?? item.key,
+            sizeBytes: item.size,
+            mimeType: undefined,
+            lastModified: item.lastModified?.toISOString(),
+            etag: item.etag,
+            storageClass: item.storageClass
+          }))
         };
       }
 
@@ -649,6 +756,7 @@ async function run(action: string, payload: Json): Promise<unknown> {
       const connectionId = String(payload.connectionId);
       const connectionRows = await prisma.$queryRawUnsafe<
         Array<{
+          provider: string | null;
           endpoint: string;
           region: string;
           encrypted_access_key_id: string;
@@ -661,7 +769,7 @@ async function run(action: string, payload: Json): Promise<unknown> {
           encryption_tag: string;
         }>
       >(
-        `SELECT endpoint, region, encrypted_access_key_id, encrypted_secret_access_key,
+        `SELECT provider, endpoint, region, encrypted_access_key_id, encrypted_secret_access_key,
                 encrypted_access_key_iv, encrypted_access_key_tag,
                 encrypted_secret_access_key_iv, encrypted_secret_access_key_tag,
                 encryption_iv, encryption_tag
@@ -690,7 +798,7 @@ async function run(action: string, payload: Json): Promise<unknown> {
         connection.encrypted_secret_access_key_iv || connection.encryption_iv,
         connection.encrypted_secret_access_key_tag || connection.encryption_tag
       );
-      const client = makeClient(connection.endpoint, connection.region, accessKeyId, secretAccessKey);
+      const client = makeClient(normalizeProvider(connection.provider), connection.endpoint, connection.region, accessKeyId, secretAccessKey);
 
       for (const item of files) {
         const sourcePath = String(item.sourcePath);
@@ -738,9 +846,138 @@ async function run(action: string, payload: Json): Promise<unknown> {
       }
       return null;
     }
+    case "list_sync_folders": {
+      const userId = await currentUserId();
+      return prisma.$queryRawUnsafe(
+        `SELECT id, connection_id as connectionId, local_path as localPath, target_prefix as targetPrefix, enabled, updated_at as updatedAt
+         FROM sync_folders WHERE user_id = ? ORDER BY created_at ASC`,
+        userId
+      );
+    }
+    case "add_sync_folder": {
+      const userId = await currentUserId();
+      const connectionId = String(payload.connectionId);
+      const localPath = String(payload.localPath ?? "");
+      if (!localPath || !fs.existsSync(localPath) || !fs.statSync(localPath).isDirectory()) {
+        throw new Error("Select a valid local folder.");
+      }
+      const id = `sync-${Date.now()}`;
+      const targetPrefix = String(payload.targetPrefix ?? "").replace(/^\/+|\/+$/g, "");
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO sync_folders (id, user_id, connection_id, local_path, target_prefix)
+         VALUES (?, ?, ?, ?, ?)`,
+        id,
+        userId,
+        connectionId,
+        localPath,
+        targetPrefix
+      );
+      return { id, connectionId, localPath, targetPrefix, enabled: 1, updatedAt: new Date().toISOString() };
+    }
+    case "remove_sync_folder": {
+      const userId = await currentUserId();
+      await prisma.$executeRawUnsafe("DELETE FROM sync_folders WHERE id = ? AND user_id = ?", String(payload.syncFolderId), userId);
+      return null;
+    }
+    case "sync_connection_folders": {
+      const userId = await currentUserId();
+      const connectionId = String(payload.connectionId);
+      const connectionRows = await prisma.$queryRawUnsafe<
+        Array<{
+          bucket_name: string;
+          provider: string | null;
+          endpoint: string;
+          region: string;
+          encrypted_access_key_id: string;
+          encrypted_secret_access_key: string;
+          encrypted_access_key_iv: string;
+          encrypted_access_key_tag: string;
+          encrypted_secret_access_key_iv: string;
+          encrypted_secret_access_key_tag: string;
+          encryption_iv: string;
+          encryption_tag: string;
+        }>
+      >(
+        `SELECT bucket_name, provider, endpoint, region, encrypted_access_key_id, encrypted_secret_access_key,
+                encrypted_access_key_iv, encrypted_access_key_tag,
+                encrypted_secret_access_key_iv, encrypted_secret_access_key_tag,
+                encryption_iv, encryption_tag
+         FROM r2_connections WHERE id = ? AND user_id = ?`,
+        connectionId,
+        userId
+      );
+      const connection = connectionRows[0];
+      if (!connection) throw new Error("Connection not found.");
+      const masterKey = getOrCreateMasterKey(userId);
+      const accessKeyId = decryptSecret(
+        masterKey,
+        userId,
+        connectionId,
+        connection.encrypted_access_key_id,
+        connection.encrypted_access_key_iv || connection.encryption_iv,
+        connection.encrypted_access_key_tag || connection.encryption_tag
+      );
+      const secretAccessKey = decryptSecret(
+        masterKey,
+        userId,
+        connectionId,
+        connection.encrypted_secret_access_key,
+        connection.encrypted_secret_access_key_iv || connection.encryption_iv,
+        connection.encrypted_secret_access_key_tag || connection.encryption_tag
+      );
+      const client = makeClient(normalizeProvider(connection.provider), connection.endpoint, connection.region, accessKeyId, secretAccessKey);
+      const folders = await prisma.$queryRawUnsafe<Array<{ id: string; local_path: string; target_prefix: string; last_snapshot: string }>>(
+        "SELECT id, local_path, target_prefix, last_snapshot FROM sync_folders WHERE user_id = ? AND connection_id = ? AND enabled = 1",
+        userId,
+        connectionId
+      );
+      let uploaded = 0;
+      for (const folder of folders) {
+        if (!fs.existsSync(folder.local_path)) {
+          continue;
+        }
+        const previous = JSON.parse(folder.last_snapshot || "{}") as Record<string, { size: number; mtimeMs: number }>;
+        const next: Record<string, { size: number; mtimeMs: number }> = {};
+        const files = collectLocalFiles(folder.local_path);
+        for (const filePath of files) {
+          const stat = fs.statSync(filePath);
+          const relative = path.relative(folder.local_path, filePath).replace(/\\/g, "/");
+          next[relative] = { size: stat.size, mtimeMs: stat.mtimeMs };
+          const old = previous[relative];
+          if (old && old.size === stat.size && Math.floor(old.mtimeMs) === Math.floor(stat.mtimeMs)) {
+            continue;
+          }
+          const objectKey = `${folder.target_prefix ? `${folder.target_prefix.replace(/\/+$/, "")}/` : ""}${relative}`;
+          await client.send(new PutObjectCommand({ Bucket: connection.bucket_name, Key: objectKey, Body: fs.readFileSync(filePath) }));
+          uploaded += 1;
+        }
+        await prisma.$executeRawUnsafe(
+          "UPDATE sync_folders SET last_snapshot = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+          JSON.stringify(next),
+          folder.id
+        );
+      }
+      return { uploaded };
+    }
     default:
       throw new Error(`Unsupported action: ${action}`);
   }
+}
+
+function collectLocalFiles(root: string): string[] {
+  const entries = fs.readdirSync(root, { withFileTypes: true });
+  const files: string[] = [];
+  for (const entry of entries) {
+    const entryPath = path.join(root, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...collectLocalFiles(entryPath));
+      continue;
+    }
+    if (entry.isFile()) {
+      files.push(entryPath);
+    }
+  }
+  return files;
 }
 
 async function main() {

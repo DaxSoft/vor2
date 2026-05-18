@@ -1,5 +1,6 @@
 export interface R2ConnectionSafe {
   id: string;
+  provider?: "r2" | "s3";
   name: string;
   bucketName: string;
   endpoint: string;
@@ -11,6 +12,7 @@ export interface R2ConnectionSafe {
 }
 
 export interface R2ConnectionCreateInput {
+  provider: "r2" | "s3";
   name: string;
   bucketName: string;
   accountId?: string;

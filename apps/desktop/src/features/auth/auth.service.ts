@@ -1,4 +1,4 @@
-import { createAuthClient } from "@r2-explorer/auth/src/auth-client";
+import { createAuthClient } from "@vor2/auth/src/auth-client";
 
 const client = createAuthClient();
 
@@ -17,5 +17,5 @@ export const authService = {
   },
   async deleteAccount() {
     return client.deleteAccount();
-  }
+  },
 };

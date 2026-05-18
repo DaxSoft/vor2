@@ -1,5 +1,5 @@
 [package]
-name = "r2-explorer-desktop"
+name = "vor2-desktop"
 version = "0.1.0"
 description = "R2 Explorer"
 authors = ["R2 Explorer"]

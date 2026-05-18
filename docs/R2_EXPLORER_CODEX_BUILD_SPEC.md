@@ -135,7 +135,7 @@ The final UI must match the generated mockup direction 1:1:
 Use a Turborepo-style monorepo.
 
 ```txt
-r2-explorer/
+vor2/
 ├─ apps/
 │  └─ desktop/
 │     ├─ src/
@@ -509,7 +509,7 @@ http://localhost:<auth-port>/api/auth/callback/github
 Alternative deep link:
 
 ```txt
-r2-explorer://auth/callback
+vor2://auth/callback
 ```
 
 Use the preferred local callback for v1 because it is easier to wire with Better Auth.
@@ -698,8 +698,8 @@ Given current path:
 Call:
 
 ```ts
-Prefix: "images/banners/"
-Delimiter: "/"
+Prefix: "images/banners/";
+Delimiter: "/";
 ```
 
 Convert:
@@ -788,9 +788,7 @@ Use full-screen app container:
 
 ```tsx
 <div className="h-screen w-screen overflow-hidden bg-[#05070d] text-[#f5f8ff]">
-  <div className="app-acrylic-shell">
-    ...
-  </div>
+  <div className="app-acrylic-shell">...</div>
 </div>
 ```
 
@@ -799,8 +797,16 @@ The background should include a subtle blue radial glow:
 ```css
 .app-background {
   background:
-    radial-gradient(circle at 75% 15%, rgba(36, 136, 255, 0.28), transparent 38%),
-    radial-gradient(circle at 10% 90%, rgba(36, 136, 255, 0.18), transparent 32%),
+    radial-gradient(
+      circle at 75% 15%,
+      rgba(36, 136, 255, 0.28),
+      transparent 38%
+    ),
+    radial-gradient(
+      circle at 10% 90%,
+      rgba(36, 136, 255, 0.18),
+      transparent 32%
+    ),
     linear-gradient(135deg, #05070d 0%, #0a101c 50%, #05070d 100%);
 }
 ```
@@ -842,11 +848,7 @@ The background should include a subtle blue radial glow:
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/icon.ico"
-    ]
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.ico"]
   }
 }
 ```
@@ -908,7 +910,11 @@ Always implement the visual design in CSS too, because OS window effects vary by
 
 .glass-panel {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025)),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.055),
+      rgba(255, 255, 255, 0.025)
+    ),
     rgba(9, 14, 24, 0.68);
   backdrop-filter: blur(28px) saturate(140%);
   -webkit-backdrop-filter: blur(28px) saturate(140%);
@@ -961,11 +967,18 @@ const config: Config = {
         panel: "14px",
       },
       boxShadow: {
-        glass: "0 24px 80px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
+        glass:
+          "0 24px 80px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
         blue: "0 0 0 1px rgba(36, 136, 255, 0.48), 0 0 24px rgba(36, 136, 255, 0.18)",
       },
       fontFamily: {
-        sans: ["Inter", "Segoe UI Variable", "Segoe UI", "system-ui", "sans-serif"],
+        sans: [
+          "Inter",
+          "Segoe UI Variable",
+          "Segoe UI",
+          "system-ui",
+          "sans-serif",
+        ],
       },
     },
   },

@@ -7,7 +7,7 @@
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
     "beforeDevCommand": "yarn workspace @vor2/desktop web:dev",
-    "beforeBuildCommand": "yarn workspace @vor2/desktop build"
+    "beforeBuildCommand": ""
   },
   "app": {
     "windows": [
