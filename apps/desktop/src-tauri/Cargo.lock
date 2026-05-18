@@ -3882,36 +3882,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 
 [[package]]
-name = "vor2-desktop"
-version = "0.1.0"
-dependencies = [
- "aes-gcm",
- "anyhow",
- "aws-config",
- "aws-sdk-s3",
- "base64 0.22.1",
- "chrono",
- "hex",
- "hkdf",
- "keyring",
- "once_cell",
- "rand",
- "rfd 0.14.1",
- "rusqlite",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "tauri-plugin-shell",
- "tokio",
- "urlencoding",
- "window-vibrancy",
-]
-
-[[package]]
 name = "rand"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5827,6 +5797,36 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "vor2-desktop"
+version = "0.1.0"
+dependencies = [
+ "aes-gcm",
+ "anyhow",
+ "aws-config",
+ "aws-sdk-s3",
+ "base64 0.22.1",
+ "chrono",
+ "hex",
+ "hkdf",
+ "keyring",
+ "once_cell",
+ "rand",
+ "rfd 0.14.1",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "tauri-plugin-shell",
+ "tokio",
+ "urlencoding",
+ "window-vibrancy",
+]
 
 [[package]]
 name = "vsimd"
