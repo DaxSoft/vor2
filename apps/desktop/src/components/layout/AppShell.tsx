@@ -134,6 +134,23 @@ export function AppShell() {
     setQueueVisible,
   ]);
 
+  useEffect(() => {
+    if (!activeConnection) {
+      return;
+    }
+    const sync = () => {
+      void invoke("sync_connection_folders", { connectionId: activeConnection.id }).then((result) => {
+        const uploaded = (result as { uploaded?: number } | null)?.uploaded ?? 0;
+        if (uploaded > 0) {
+          void refresh();
+        }
+      });
+    };
+    sync();
+    const timer = window.setInterval(sync, 30000);
+    return () => window.clearInterval(timer);
+  }, [activeConnection, refresh]);
+
   const onUpload = useMemo(
     () => async () => {
       if (!activeConnection) {
@@ -231,34 +248,38 @@ export function AppShell() {
           <div
             className={`grid min-h-0 gap-3 overflow-hidden ${shouldShowQueue ? "grid-rows-[minmax(0,1fr)_minmax(190px,34%)]" : "grid-rows-[minmax(0,1fr)]"}`}
           >
-            <ExplorerView
-              onUpload={() => {
-                void onUpload();
-              }}
-              onNewFolder={onNewFolder}
-            />
-            {shouldShowQueue ? (
-              <UploadQueue
-                onPickFiles={() => {
+            <div className="min-h-0 overflow-hidden">
+              <ExplorerView
+                onUpload={() => {
                   void onUpload();
                 }}
-                onDropPaths={(paths) => {
-                  if (!activeConnection) {
-                    return;
-                  }
-                  void invoke<FileDialogEntry[]>("inspect_file_paths", {
-                    paths,
-                  }).then(async (entries) => {
-                    await addPathEntries(
-                      entries,
-                      currentPath,
-                      activeConnection.id,
-                      activeConnection.bucketName,
-                    );
-                    await refresh();
-                  });
-                }}
+                onNewFolder={onNewFolder}
               />
+            </div>
+            {shouldShowQueue ? (
+              <div className="min-h-0 overflow-hidden">
+                <UploadQueue
+                  onPickFiles={() => {
+                    void onUpload();
+                  }}
+                  onDropPaths={(paths) => {
+                    if (!activeConnection) {
+                      return;
+                    }
+                    void invoke<FileDialogEntry[]>("inspect_file_paths", {
+                      paths,
+                    }).then(async (entries) => {
+                      await addPathEntries(
+                        entries,
+                        currentPath,
+                        activeConnection.id,
+                        activeConnection.bucketName,
+                      );
+                      await refresh();
+                    });
+                  }}
+                />
+              </div>
             ) : null}
           </div>
         </div>

@@ -32,6 +32,7 @@ export const useExplorerStore = create<ExplorerStoreState>((set, get) => ({
   currentPath: "/",
   nodes: [],
   selectedNodeId: null,
+  selectedNodeIds: [],
   expandedFolders: [],
   isLoading: false,
   error: null,
@@ -65,7 +66,7 @@ export const useExplorerStore = create<ExplorerStoreState>((set, get) => ({
         }
         return { ...node, signedUrl: signed.url, signedUrlExpiresAt: new Date(signed.expiresAt) };
       });
-      set({ nodes: mapped, presignedByKey: validPresigned, isLoading: false, selectedNodeId: null });
+      set({ nodes: mapped, presignedByKey: validPresigned, isLoading: false, selectedNodeId: null, selectedNodeIds: [] });
     } catch (error) {
       set({
         isLoading: false,
@@ -80,7 +81,21 @@ export const useExplorerStore = create<ExplorerStoreState>((set, get) => ({
     await get().loadPath(get().currentPath);
   },
   selectNode(id) {
-    set({ selectedNodeId: id });
+    set({ selectedNodeId: id, selectedNodeIds: [id] });
+  },
+  toggleNodeSelection(id) {
+    set((state) => {
+      const selectedNodeIds = state.selectedNodeIds.includes(id)
+        ? state.selectedNodeIds.filter((item) => item !== id)
+        : [...state.selectedNodeIds, id];
+      return { selectedNodeIds, selectedNodeId: selectedNodeIds[selectedNodeIds.length - 1] ?? null };
+    });
+  },
+  selectAllNodes() {
+    set((state) => ({ selectedNodeIds: state.nodes.map((node) => node.id), selectedNodeId: state.nodes[0]?.id ?? null }));
+  },
+  clearSelection() {
+    set({ selectedNodeId: null, selectedNodeIds: [] });
   },
   async openNode(id) {
     const node = get().nodes.find((item) => item.id === id);
@@ -119,6 +134,12 @@ export const useExplorerStore = create<ExplorerStoreState>((set, get) => ({
     }
     await get().refresh();
   },
+  async deleteNodes(keys) {
+    for (const key of keys) {
+      await get().deleteNode(key);
+    }
+    await get().refresh();
+  },
   async renameNode(oldKey, newKey) {
     const state = get();
     if (!state.activeConnectionId) {
@@ -128,6 +149,18 @@ export const useExplorerStore = create<ExplorerStoreState>((set, get) => ({
       await explorerService.renamePrefix(state.activeConnectionId, state.bucketName, oldKey, newKey);
     } else {
       await explorerService.renameObject(state.activeConnectionId, state.bucketName, oldKey, newKey);
+    }
+    await get().refresh();
+  },
+  async moveNode(oldKey, newKey) {
+    const state = get();
+    if (!state.activeConnectionId) {
+      return;
+    }
+    if (oldKey.endsWith("/")) {
+      await explorerService.movePrefix(state.activeConnectionId, state.bucketName, oldKey, newKey);
+    } else {
+      await explorerService.moveObject(state.activeConnectionId, state.bucketName, oldKey, newKey);
     }
     await get().refresh();
   },

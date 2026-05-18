@@ -2676,6 +2676,11 @@ react-dom@latest:
   dependencies:
     scheduler "^0.27.0"
 
+react-movable@^3.4.1:
+  version "3.4.1"
+  resolved "https://registry.npmjs.org/react-movable/-/react-movable-3.4.1.tgz#f35965584f45e6bb9c0368e0f46308fabfb4c315"
+  integrity sha512-VTrBKjRWV4yVUDGj5dIZIhf07fyoFDXzIV6xs3KNNHpgPbkPT7FNu/Vbe11ZjHmT48uOykCmRMpS66DrzRbZZg==
+
 react@latest:
   version "19.2.6"
   resolved "https://registry.npmjs.org/react/-/react-19.2.6.tgz#3dadb8e12b2a7934c1d5317973e5dce1301f9a4d"

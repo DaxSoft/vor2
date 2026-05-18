@@ -39,6 +39,7 @@ model User {
 model R2Connection {
   id         String  @id @default(cuid())
   userId     String
+  provider   String  @default("r2")
   name       String
   accountId  String?
   bucketName String
@@ -60,9 +61,27 @@ model R2Connection {
 
   user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   uploads UploadHistory[]
+  syncFolders SyncFolder[]
 
   @@index([userId])
   @@index([bucketName])
+}
+
+model SyncFolder {
+  id           String   @id @default(cuid())
+  userId       String
+  connectionId String
+  localPath    String
+  targetPrefix String   @default("")
+  lastSnapshot String   @default("{}")
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  connection R2Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([connectionId])
 }
 
 model AppSettings {

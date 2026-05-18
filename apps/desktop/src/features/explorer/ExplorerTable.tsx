@@ -28,15 +28,23 @@ function formatSignedTtl(expiresAt: Date | undefined, nowMs: number): string {
 export function ExplorerTable({
   nodes,
   selectedNodeId,
+  selectedNodeIds,
   onSelect,
+  onToggleSelect,
+  onSelectAll,
   onOpen,
   onContextMenu,
+  onMove,
 }: {
   nodes: R2ExplorerNode[];
   selectedNodeId: string | null;
+  selectedNodeIds: string[];
   onSelect: (id: string) => void;
+  onToggleSelect: (id: string) => void;
+  onSelectAll: () => void;
   onOpen: (id: string) => void;
   onContextMenu: (event: MouseEvent, node: R2ExplorerNode) => void;
+  onMove: (node: R2ExplorerNode, folder: R2ExplorerNode) => void;
 }) {
   const [now, setNow] = useState(() => Date.now());
 
@@ -51,6 +59,14 @@ export function ExplorerTable({
     <table className="w-full table-fixed text-left text-[13px] text-app-text">
       <thead>
         <tr className="border-b border-app-border/20 text-xs font-semibold text-app-muted">
+          <th className="w-9 px-3 py-2">
+            <input
+              aria-label="Select all"
+              type="checkbox"
+              checked={nodes.length > 0 && selectedNodeIds.length === nodes.length}
+              onChange={onSelectAll}
+            />
+          </th>
           <th className="px-3 py-2">Name</th>
           <th className="px-3 py-2">Type</th>
           <th className="px-3 py-2">Size</th>
@@ -63,14 +79,45 @@ export function ExplorerTable({
           <tr
             key={node.id}
             className={`cursor-pointer border-b border-app-border/35 ${
-              node.id === selectedNodeId ? "bg-accent-soft" : "hover:bg-white/5"
+              selectedNodeIds.includes(node.id) || node.id === selectedNodeId ? "bg-accent-soft" : "hover:bg-white/5"
             }`}
+            draggable
             onClick={() => onSelect(node.id)}
             onDoubleClick={() => {
               void onOpen(node.id);
             }}
             onContextMenu={(event) => onContextMenu(event, node)}
+            onDragStart={(event) => {
+              event.dataTransfer.setData("text/vor2-node-id", node.id);
+              event.dataTransfer.effectAllowed = "move";
+            }}
+            onDragOver={(event) => {
+              if (node.kind === "folder") {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+              }
+            }}
+            onDrop={(event) => {
+              if (node.kind !== "folder") {
+                return;
+              }
+              event.preventDefault();
+              const draggedId = event.dataTransfer.getData("text/vor2-node-id");
+              const dragged = nodes.find((item) => item.id === draggedId);
+              if (dragged && dragged.id !== node.id) {
+                onMove(dragged, node);
+              }
+            }}
           >
+            <td className="px-3 py-2">
+              <input
+                aria-label={`Select ${node.name}`}
+                type="checkbox"
+                checked={selectedNodeIds.includes(node.id)}
+                onClick={(event) => event.stopPropagation()}
+                onChange={() => onToggleSelect(node.id)}
+              />
+            </td>
             <td className="px-3 py-2">
               <div className="flex min-w-0 items-center gap-2">
                 {node.kind === "folder" ? (

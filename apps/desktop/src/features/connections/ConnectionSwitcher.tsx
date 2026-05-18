@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Plus } from "lucide-react";
+import { Check, ChevronDown, Cloud, Database, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useConnectionStore } from "./connection.store";
 
@@ -43,7 +43,10 @@ export function ConnectionSwitcher({ onAddConnection }: { onAddConnection: () =>
         className="blue-focus flex w-full items-center justify-between rounded-xl border border-app-border bg-white/10 px-3 py-2 text-sm backdrop-blur-xl"
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="truncate">{active?.name ?? "Select connection"}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          {active?.provider === "s3" ? <Database className="h-3.5 w-3.5 text-amber-300" /> : <Cloud className="h-3.5 w-3.5 text-accent" />}
+          <span className="truncate">{active?.name ?? "Select connection"}</span>
+        </span>
         <ChevronDown className="h-4 w-4 text-app-muted" />
       </button>
 
@@ -59,7 +62,10 @@ export function ConnectionSwitcher({ onAddConnection }: { onAddConnection: () =>
                 setOpen(false);
               }}
             >
-              <span className="truncate">{item.name}</span>
+              <span className="flex min-w-0 items-center gap-2">
+                {item.provider === "s3" ? <Database className="h-3.5 w-3.5 text-amber-300" /> : <Cloud className="h-3.5 w-3.5 text-accent" />}
+                <span className="truncate">{item.name}</span>
+              </span>
               {item.id === activeConnectionId ? <Check className="h-4 w-4 text-accent" /> : null}
             </button>
           ))}

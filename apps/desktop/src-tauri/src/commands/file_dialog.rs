@@ -23,6 +23,14 @@ pub async fn open_file_dialog() -> Result<Vec<FileDialogEntry>, String> {
 }
 
 #[tauri::command]
+pub async fn open_folder_dialog() -> Result<Option<String>, String> {
+    Ok(rfd::FileDialog::new()
+        .set_title("Select folder")
+        .pick_folder()
+        .map(|path| path.to_string_lossy().to_string()))
+}
+
+#[tauri::command]
 pub async fn inspect_file_paths(paths: Vec<String>) -> Result<Vec<FileDialogEntry>, String> {
     Ok(map_paths_to_entries(paths))
 }

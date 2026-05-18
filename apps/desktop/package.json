@@ -34,6 +34,7 @@
     "prisma": "^7.8.0",
     "react": "latest",
     "react-dom": "latest",
+    "react-movable": "^3.4.1",
     "tailwind-merge": "latest",
     "zustand": "latest"
   },

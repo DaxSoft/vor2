@@ -67,6 +67,7 @@ pub fn run() {
             commands::window::update_app_settings,
             commands::window::set_startup_enabled,
             commands::file_dialog::open_file_dialog,
+            commands::file_dialog::open_folder_dialog,
             commands::file_dialog::inspect_file_paths,
             commands::file_dialog::reveal_in_explorer,
             commands::backend::list_connections,
@@ -79,9 +80,16 @@ pub fn run() {
             commands::backend::list_prefix_objects,
             commands::backend::rename_object,
             commands::backend::rename_prefix,
+            commands::backend::move_object,
+            commands::backend::move_prefix,
+            commands::backend::search_objects,
             commands::backend::get_bucket_usage,
             commands::backend::create_presigned_get_url,
-            commands::backend::enqueue_uploads
+            commands::backend::enqueue_uploads,
+            commands::backend::list_sync_folders,
+            commands::backend::add_sync_folder,
+            commands::backend::remove_sync_folder,
+            commands::backend::sync_connection_folders
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

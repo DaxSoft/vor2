@@ -38,6 +38,7 @@ export interface ExplorerStoreState {
   currentPath: string;
   nodes: R2ExplorerNode[];
   selectedNodeId: string | null;
+  selectedNodeIds: string[];
   expandedFolders: string[];
   isLoading: boolean;
   error: string | null;
@@ -49,12 +50,17 @@ export interface ExplorerStoreState {
   loadPath: (path: string) => Promise<void>;
   refresh: () => Promise<void>;
   selectNode: (id: string) => void;
+  toggleNodeSelection: (id: string) => void;
+  selectAllNodes: () => void;
+  clearSelection: () => void;
   openNode: (id: string) => Promise<void>;
   goBack: () => Promise<void>;
   goParent: () => Promise<void>;
   createFolder: (name: string) => Promise<void>;
   deleteNode: (key: string) => Promise<void>;
+  deleteNodes: (keys: string[]) => Promise<void>;
   renameNode: (oldKey: string, newKey: string) => Promise<void>;
+  moveNode: (oldKey: string, newKey: string) => Promise<void>;
   setSearchQuery: (query: string) => void;
   setSort: (sortBy: SortBy, direction: "asc" | "desc") => void;
   setActiveConnection: (connectionId: string, bucketName: string, publicUrl?: string) => void;

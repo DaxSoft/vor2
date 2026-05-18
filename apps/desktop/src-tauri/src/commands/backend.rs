@@ -1,12 +1,24 @@
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::State;
 
 use crate::state::app_state::AppState;
+
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+fn configure_spawn(command: &mut Command) {
+    #[cfg(target_os = "windows")]
+    {
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -25,6 +37,7 @@ pub struct SessionUserDto {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct R2ConnectionCreateInput {
+    pub provider: Option<String>,
     pub name: String,
     pub bucket_name: String,
     pub account_id: Option<String>,
@@ -39,6 +52,7 @@ pub struct R2ConnectionCreateInput {
 #[serde(rename_all = "camelCase")]
 pub struct R2ConnectionSafeDto {
     pub id: String,
+    pub provider: Option<String>,
     pub name: String,
     pub bucket_name: String,
     pub endpoint: String,
@@ -88,6 +102,37 @@ pub struct BrowseFolderResult {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct SearchObjectsInput {
+    pub pattern: Option<String>,
+    pub use_regex: bool,
+    pub scope: String,
+    pub path: String,
+    pub size_mode: String,
+    pub size_bytes: Option<u64>,
+    pub from_date: Option<String>,
+    pub to_date: Option<String>,
+    pub quick_filter: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncFolderDto {
+    pub id: String,
+    pub connection_id: String,
+    pub local_path: String,
+    pub target_prefix: String,
+    pub enabled: serde_json::Value,
+    pub updated_at: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncResultDto {
+    pub uploaded: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PrefixObjectsDto {
     pub keys: Vec<String>,
 }
@@ -131,7 +176,9 @@ fn run_bridge<T: for<'de> Deserialize<'de>>(action: &str, payload: Value) -> Res
 
     let mut spawn_errors: Vec<String> = Vec::new();
     let mut child = if tsx_cli.exists() {
-        Command::new("node")
+        let mut command = Command::new("node");
+        configure_spawn(&mut command);
+        command
             .arg(&tsx_cli)
             .arg(&bridge_script)
             .arg(action)
@@ -142,7 +189,9 @@ fn run_bridge<T: for<'de> Deserialize<'de>>(action: &str, payload: Value) -> Res
             .spawn()
             .map_err(|err| err.to_string())
     } else if local_tsx_windows.exists() {
-        Command::new(local_tsx_windows)
+        let mut command = Command::new(local_tsx_windows);
+        configure_spawn(&mut command);
+        command
             .arg(&bridge_script)
             .arg(action)
             .current_dir(&root)
@@ -152,7 +201,9 @@ fn run_bridge<T: for<'de> Deserialize<'de>>(action: &str, payload: Value) -> Res
             .spawn()
             .map_err(|err| err.to_string())
     } else if local_tsx_unix.exists() {
-        Command::new(local_tsx_unix)
+        let mut command = Command::new(local_tsx_unix);
+        configure_spawn(&mut command);
+        command
             .arg(&bridge_script)
             .arg(action)
             .current_dir(&root)
@@ -169,7 +220,9 @@ fn run_bridge<T: for<'de> Deserialize<'de>>(action: &str, payload: Value) -> Res
         if let Err(message) = child {
             spawn_errors.push(format!("tsx launch failed: {message}"));
         }
-        child = Command::new("yarn")
+        let mut command = Command::new("yarn");
+        configure_spawn(&mut command);
+        child = command
             .arg("--silent")
             .arg("workspace")
             .arg("@r2-explorer/database")
@@ -442,6 +495,68 @@ pub async fn rename_prefix(
 }
 
 #[tauri::command]
+pub async fn move_object(
+    connection_id: String,
+    bucket_name: String,
+    old_key: String,
+    new_key: String,
+) -> Result<(), String> {
+    let _: Value = run_bridge(
+        "move_object",
+        serde_json::json!({
+            "connectionId": connection_id,
+            "bucketName": bucket_name,
+            "oldKey": old_key,
+            "newKey": new_key
+        }),
+    )?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn move_prefix(
+    connection_id: String,
+    bucket_name: String,
+    old_prefix: String,
+    new_prefix: String,
+) -> Result<(), String> {
+    let _: Value = run_bridge(
+        "move_prefix",
+        serde_json::json!({
+            "connectionId": connection_id,
+            "bucketName": bucket_name,
+            "oldPrefix": old_prefix,
+            "newPrefix": new_prefix
+        }),
+    )?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn search_objects(
+    connection_id: String,
+    bucket_name: String,
+    input: SearchObjectsInput,
+) -> Result<BrowseFolderResult, String> {
+    run_bridge(
+        "search_objects",
+        serde_json::json!({
+            "connectionId": connection_id,
+            "bucketName": bucket_name,
+            "pattern": input.pattern,
+            "useRegex": input.use_regex,
+            "scope": input.scope,
+            "path": input.path,
+            "sizeMode": input.size_mode,
+            "sizeBytes": input.size_bytes,
+            "fromDate": input.from_date,
+            "toDate": input.to_date,
+            "quickFilter": input.quick_filter
+        }),
+    )
+}
+
+#[tauri::command]
 pub async fn get_bucket_usage(
     connection_id: String,
     bucket_name: String,
@@ -489,4 +604,42 @@ pub async fn enqueue_uploads(
         }),
     )?;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn list_sync_folders() -> Result<Vec<SyncFolderDto>, String> {
+    run_bridge("list_sync_folders", serde_json::json!({}))
+}
+
+#[tauri::command]
+pub async fn add_sync_folder(
+    connection_id: String,
+    local_path: String,
+    target_prefix: String,
+) -> Result<SyncFolderDto, String> {
+    run_bridge(
+        "add_sync_folder",
+        serde_json::json!({
+            "connectionId": connection_id,
+            "localPath": local_path,
+            "targetPrefix": target_prefix
+        }),
+    )
+}
+
+#[tauri::command]
+pub async fn remove_sync_folder(sync_folder_id: String) -> Result<(), String> {
+    let _: Value = run_bridge(
+        "remove_sync_folder",
+        serde_json::json!({ "syncFolderId": sync_folder_id }),
+    )?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn sync_connection_folders(connection_id: String) -> Result<SyncResultDto, String> {
+    run_bridge(
+        "sync_connection_folders",
+        serde_json::json!({ "connectionId": connection_id }),
+    )
 }
