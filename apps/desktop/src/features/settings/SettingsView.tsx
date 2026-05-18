@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useState } from "react";
 import { useAuthStore } from "@/features/auth/auth.store";
 import { useConnectionStore } from "@/features/connections/connection.store";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { useUiStore } from "./settings.store";
 
 interface SyncFolder {
@@ -86,7 +87,9 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
         </label>
       </div>
 
-      {isLoading ? <p className="mt-3 text-[11px] text-app-soft">Saving...</p> : null}
+      {isLoading ? (
+        <LoadingIndicator className="mt-3 text-[11px] text-app-soft" text="Saving settings..." />
+      ) : null}
       {error ? <p className="mt-3 text-[11px] text-rose-300">{error}</p> : null}
       {authError ? <p className="mt-3 text-[11px] text-rose-300">{authError}</p> : null}
 
@@ -175,7 +178,15 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
           });
         }}
       >
-        Delete account
+        {authLoading ? (
+          <LoadingIndicator
+            className="justify-center text-rose-200"
+            spinnerClassName="border-rose-400/30 border-t-rose-200"
+            text="Deleting account..."
+          />
+        ) : (
+          "Delete account"
+        )}
       </button>
     </div>
   );

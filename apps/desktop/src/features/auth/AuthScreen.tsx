@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import logoMark from "@/assets/logo-mark.svg";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { useAuthStore } from "./auth.store";
 
 export function AuthScreen() {
@@ -75,7 +76,15 @@ export function AuthScreen() {
             className="blue-focus rounded-xl border border-white/15 bg-accent-strong px-4 py-3 text-sm font-semibold text-white transition hover:bg-accent disabled:opacity-70"
             disabled={isLoading || !username.trim() || !password}
           >
-            Sign In
+            {isLoading ? (
+              <LoadingIndicator
+                className="justify-center text-white"
+                spinnerClassName="border-white/30 border-t-white"
+                text="Loading..."
+              />
+            ) : (
+              "Sign In"
+            )}
           </button>
           <button
             type="button"
@@ -86,7 +95,14 @@ export function AuthScreen() {
             className="blue-focus rounded-xl border border-app-border bg-white/10 px-4 py-3 text-sm font-semibold text-app-text transition hover:bg-white/15 disabled:opacity-70"
             disabled={isLoading || !username.trim() || !password}
           >
-            Create Account
+            {isLoading ? (
+              <LoadingIndicator
+                className="justify-center text-app-text"
+                text="Loading..."
+              />
+            ) : (
+              "Create Account"
+            )}
           </button>
         </div>
 

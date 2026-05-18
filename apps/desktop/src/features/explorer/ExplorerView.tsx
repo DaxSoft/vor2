@@ -22,6 +22,7 @@ import { explorerService } from "./explorer.service";
 import { useExplorerStore } from "./explorer.store";
 import { useConnectionStore } from "@/features/connections/connection.store";
 import { formatBytes } from "@/lib/format";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import type { R2ExplorerNode } from "./explorer.types";
 
 interface ExplorerViewProps {
@@ -519,7 +520,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
         ) : null}
         <div className="min-h-0 flex-1 overflow-auto">
           {isLoading ? (
-            <p className="text-xs text-app-muted">Loading...</p>
+            <LoadingIndicator text="Loading files..." />
           ) : null}
           {error ? <p className="text-xs text-rose-300">{error}</p> : null}
           {!isLoading && !error ? (

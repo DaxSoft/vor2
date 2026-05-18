@@ -11,6 +11,7 @@ import { useConnectionStore } from "@/features/connections/connection.store";
 import { connectionService } from "@/features/connections/connection.service";
 import { useExplorerStore } from "@/features/explorer/explorer.store";
 import { formatBytes } from "@/lib/format";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 
 export function Sidebar({
   onAddConnection,
@@ -191,7 +192,7 @@ export function Sidebar({
         <div className="mt-3 rounded-xl border border-app-border/20 bg-white/[0.03] p-3">
           <p className="text-xs text-app-muted">Storage Usage</p>
           {usageLoading ? (
-            <p className="mt-2 text-xs text-app-soft">Loading...</p>
+            <LoadingIndicator className="mt-2 text-app-soft" text="Loading usage..." />
           ) : usage ? (
             <>
               <p className="mt-2 text-xs text-app-text">

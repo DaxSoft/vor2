@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Cloud, Database, LogOut } from "lucide-react";
 import { useAuthStore } from "@/features/auth/auth.store";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { useConnectionStore } from "./connection.store";
 import type { R2ConnectionCreateInput } from "./connection.types";
 
@@ -43,6 +44,18 @@ const initialValue: R2ConnectionCreateInput = {
   accessKeyId: "",
   secretAccessKey: "",
   region: "auto",
+};
+
+const r2EndpointFromAccountId = (accountId: string) =>
+  accountId.trim()
+    ? `https://${accountId.trim()}.r2.cloudflarestorage.com`
+    : "";
+
+const isAutoR2Endpoint = (endpoint: string, accountId: string) => {
+  if (!endpoint.trim()) {
+    return true;
+  }
+  return endpoint.trim() === r2EndpointFromAccountId(accountId);
 };
 
 export function ConnectionForm({ onCreated }: { onCreated: () => void }) {
@@ -90,8 +103,14 @@ export function ConnectionForm({ onCreated }: { onCreated: () => void }) {
             void signOut();
           }}
         >
-          <LogOut className="h-3.5 w-3.5" />
-          Sign out
+          {authLoading ? (
+            <LoadingIndicator text="Signing out..." />
+          ) : (
+            <>
+              <LogOut className="h-3.5 w-3.5" />
+              Sign out
+            </>
+          )}
         </button>
       </div>
       <div className="grid min-w-0 grid-cols-2 gap-2">
@@ -184,9 +203,16 @@ export function ConnectionForm({ onCreated }: { onCreated: () => void }) {
             type={field.type ?? "text"}
             value={value[field.key] ?? ""}
             onChange={(event) => {
+              const nextValue = event.target.value;
               setValue((prev) => ({
                 ...prev,
-                [field.key]: event.target.value,
+                [field.key]: nextValue,
+                endpoint:
+                  provider === "r2" &&
+                  field.key === "accountId" &&
+                  isAutoR2Endpoint(prev.endpoint, prev.accountId ?? "")
+                    ? r2EndpointFromAccountId(nextValue)
+                    : prev.endpoint,
               }));
             }}
             className="blue-focus mt-1 block w-full rounded-lg border border-app-border bg-white/5 px-3 py-2 text-sm text-app-text"
@@ -202,7 +228,15 @@ export function ConnectionForm({ onCreated }: { onCreated: () => void }) {
         disabled={isLoading}
         className="blue-focus w-full rounded-lg border border-white/20 bg-accent-strong px-3 py-2 text-xs font-semibold text-white"
       >
-        Save connection
+        {isLoading ? (
+          <LoadingIndicator
+            className="justify-center text-white"
+            spinnerClassName="border-white/30 border-t-white"
+            text="Saving connection..."
+          />
+        ) : (
+          "Save connection"
+        )}
       </button>
     </form>
   );

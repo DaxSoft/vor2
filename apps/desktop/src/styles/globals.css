@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "Satoshi";
+  src: url("../assets/Satoshi-Variable.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 300 900;
+}
+
 :root {
   --accent: #2488ff;
   --accent-strong: #0f7bff;
@@ -31,10 +39,17 @@ body,
 }
 
 body {
-  font-family: Inter, "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  font-family: "Satoshi", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
   color: var(--text);
   background: transparent;
   overscroll-behavior: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
 }
 
 .app-background {
