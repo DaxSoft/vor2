@@ -18,7 +18,9 @@ function formatSignedTtl(expiresAt: Date | undefined, nowMs: number): string {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   if (minutes < 60) {
-    return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+    return remainingSeconds > 0
+      ? `${minutes}m ${remainingSeconds}s`
+      : `${minutes}m`;
   }
   const hours = Math.floor(minutes / 60);
   const minutesLeft = minutes % 60;
@@ -63,12 +65,13 @@ export function ExplorerTable({
             <input
               aria-label="Select all"
               type="checkbox"
-              checked={nodes.length > 0 && selectedNodeIds.length === nodes.length}
+              checked={
+                nodes.length > 0 && selectedNodeIds.length === nodes.length
+              }
               onChange={onSelectAll}
             />
           </th>
           <th className="px-3 py-2">Name</th>
-          <th className="px-3 py-2">Type</th>
           <th className="px-3 py-2">Size</th>
           <th className="px-3 py-2">Modified</th>
           <th className="px-3 py-2">Status</th>
@@ -79,7 +82,9 @@ export function ExplorerTable({
           <tr
             key={node.id}
             className={`cursor-pointer border-b border-app-border/35 ${
-              selectedNodeIds.includes(node.id) || node.id === selectedNodeId ? "bg-accent-soft" : "hover:bg-white/5"
+              selectedNodeIds.includes(node.id) || node.id === selectedNodeId
+                ? "bg-accent-soft"
+                : "hover:bg-white/5"
             }`}
             draggable
             onClick={() => onSelect(node.id)}
@@ -128,9 +133,9 @@ export function ExplorerTable({
                 <span className="truncate text-app-text">{node.name}</span>
               </div>
             </td>
-            <td className="px-3 py-2 text-app-muted">
+            {/* <td className="px-3 py-2 text-app-muted">
               {node.kind === "folder" ? "Folder" : (node.mimeType ?? "File")}
-            </td>
+            </td> */}
             <td className="px-3 py-2 text-app-muted">
               {node.kind === "file"
                 ? formatBytes(node.sizeBytes)

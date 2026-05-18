@@ -65,7 +65,12 @@ export function TitleBar({
     >
       <div data-tauri-drag-region className="flex items-center gap-2">
         <img src={logoMark} alt="vor2" className="h-4 w-4" />
-        <span data-tauri-drag-region className="text-sm font-semibold text-app-text">vor2</span>
+        <span
+          data-tauri-drag-region
+          className="text-sm font-semibold text-app-text"
+        >
+          vor2
+        </span>
       </div>
 
       <label
@@ -79,7 +84,7 @@ export function TitleBar({
           aria-label="Search"
           value={search}
           onChange={(event) => onSearch(event.target.value)}
-          className="blue-focus h-9 w-full rounded-lg border border-app-border/20 bg-white/[0.04] pl-9 pr-16 text-xs text-app-text"
+          className="blue-focus h-9 w-full rounded-lg border border-app-border/20 bg-white/[0.04] pl-9 pr-16 text-sm text-app-text"
           placeholder="Search files and folders..."
         />
         <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-app-border/20 bg-white/[0.03] px-1.5 py-0.5 text-[10px] text-app-soft">
@@ -161,7 +166,11 @@ export function TitleBar({
           className="rounded-lg border border-app-border/20 bg-white/[0.04] px-2 py-1.5 text-xs"
           onClick={onToggleTheme}
         >
-          {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+          {theme === "dark" ? (
+            <Sun className="h-3.5 w-3.5" />
+          ) : (
+            <Moon className="h-3.5 w-3.5" />
+          )}
         </button>
       </div>
 

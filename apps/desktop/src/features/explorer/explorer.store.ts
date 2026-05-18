@@ -81,7 +81,7 @@ export const useExplorerStore = create<ExplorerStoreState>((set, get) => ({
     await get().loadPath(get().currentPath);
   },
   selectNode(id) {
-    set({ selectedNodeId: id, selectedNodeIds: [id] });
+    set({ selectedNodeId: id });
   },
   toggleNodeSelection(id) {
     set((state) => {

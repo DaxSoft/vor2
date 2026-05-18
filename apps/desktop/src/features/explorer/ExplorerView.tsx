@@ -3,6 +3,7 @@ import {
   ChevronLeft,
   Copy,
   Download,
+  Folder,
   FolderPlus,
   Filter,
   Link2,
@@ -79,6 +80,14 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
   const [expiringDialogNode, setExpiringDialogNode] =
     useState<R2ExplorerNode | null>(null);
   const [expiringMinutes, setExpiringMinutes] = useState("15");
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [moveDestination, setMoveDestination] = useState("");
+  const [isMovingSelected, setIsMovingSelected] = useState(false);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [renameBaseName, setRenameBaseName] = useState("");
+  const [isRenamingSelected, setIsRenamingSelected] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeletingSelected, setIsDeletingSelected] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [advancedResults, setAdvancedResults] = useState<
     R2ExplorerNode[] | null
@@ -119,6 +128,24 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
   );
   const activeConnection =
     connections.find((item) => item.id === activeConnectionId) ?? null;
+  const moveFolderOptions = useMemo(() => {
+    const selectedKeys = new Set(selectedNodes.map((node) => node.key));
+    const folders = visibleNodes
+      .filter((node) => {
+        if (node.kind !== "folder" || selectedKeys.has(node.key)) {
+          return false;
+        }
+        return !selectedNodes.some(
+          (selected) =>
+            selected.kind === "folder" && node.key.startsWith(selected.key),
+        );
+      })
+      .map((node) => ({
+        key: node.key.replace(/\/$/, ""),
+        label: `/${node.key.replace(/\/$/, "")}`,
+      }));
+    return [{ key: "", label: "/" }, ...folders];
+  }, [selectedNodes, visibleNodes]);
 
   const closeMenus = () => {
     setNodeMenu(null);
@@ -277,81 +304,94 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
     setMessage("Moved.");
   };
 
-  const moveSelected = async () => {
+  const openMoveDialog = () => {
     if (selectedNodes.length === 0) {
       return;
     }
-    const destination = window
-      .prompt("Move selected to folder prefix", currentPath.replace(/^\//, ""))
-      ?.replace(/^\/+|\/+$/g, "");
-    if (destination === undefined) {
+    setMoveDestination(moveFolderOptions[0]?.key ?? "");
+    setMoveDialogOpen(true);
+  };
+
+  const moveSelected = async () => {
+    if (selectedNodes.length === 0 || isMovingSelected) {
       return;
     }
+    const destination = moveDestination.replace(/^\/+|\/+$/g, "");
     const ok = window.confirm(
       `Move ${selectedNodes.length} item(s) to ${destination || "/"}?`,
     );
     if (!ok) {
       return;
     }
-    for (const node of selectedNodes) {
-      await moveNode(
-        node.key,
-        `${destination ? `${destination}/` : ""}${node.name}${node.kind === "folder" ? "/" : ""}`,
-      );
+    setIsMovingSelected(true);
+    try {
+      for (const node of selectedNodes) {
+        await moveNode(
+          node.key,
+          `${destination ? `${destination}/` : ""}${node.name}${node.kind === "folder" ? "/" : ""}`,
+        );
+      }
+      clearSelection();
+      setMoveDialogOpen(false);
+      setMessage("Batch move completed.");
+    } finally {
+      setIsMovingSelected(false);
     }
-    clearSelection();
-    setMessage("Batch move completed.");
+  };
+
+  const openRenameDialog = () => {
+    if (selectedNodes.length === 0) {
+      return;
+    }
+    setRenameBaseName("");
+    setRenameDialogOpen(true);
   };
 
   const renameSelected = async () => {
+    const baseName = renameBaseName.trim();
+    if (selectedNodes.length === 0 || !baseName || isRenamingSelected) {
+      return;
+    }
+    setIsRenamingSelected(true);
+    try {
+      for (const [index, node] of selectedNodes.entries()) {
+        const extension =
+          node.kind === "file" && node.name.includes(".")
+            ? `.${node.name.split(".").pop()}`
+            : "";
+        await renameNode(
+          node.key,
+          buildRenamedKey(node, `${baseName}-${index + 1}${extension}`),
+        );
+      }
+      clearSelection();
+      setRenameDialogOpen(false);
+      setMessage("Batch rename completed.");
+    } finally {
+      setIsRenamingSelected(false);
+    }
+  };
+
+  const openDeleteDialog = () => {
     if (selectedNodes.length === 0) {
       return;
     }
-    const pattern = window
-      .prompt("Rename pattern. Use {name} and {index}.", "{name}-{index}")
-      ?.trim();
-    if (!pattern) {
-      return;
-    }
-    const ok = window.confirm(`Rename ${selectedNodes.length} item(s)?`);
-    if (!ok) {
-      return;
-    }
-    for (const [index, node] of selectedNodes.entries()) {
-      const extension =
-        node.kind === "file" && node.name.includes(".")
-          ? `.${node.name.split(".").pop()}`
-          : "";
-      const baseName =
-        node.kind === "file"
-          ? node.name.replace(
-              new RegExp(`${extension.replace(".", "\\.")}$`),
-              "",
-            )
-          : node.name;
-      const nextName =
-        pattern
-          .replaceAll("{name}", baseName)
-          .replaceAll("{index}", String(index + 1)) + extension;
-      await renameNode(node.key, buildRenamedKey(node, nextName));
-    }
-    clearSelection();
-    setMessage("Batch rename completed.");
+    setDeleteDialogOpen(true);
   };
 
   const deleteSelected = async () => {
-    if (selectedNodes.length === 0) {
+    if (selectedNodes.length === 0 || isDeletingSelected) {
       return;
     }
-    const ok = window.confirm(
-      `Delete ${selectedNodes.length} selected item(s)? Folders include all subfolders and files.`,
-    );
-    if (!ok) {
-      return;
+    setIsDeletingSelected(true);
+    try {
+      await deleteNodes(selectedNodes.map((node) => node.key));
+      clearSelection();
+      setDeleteDialogOpen(false);
+      setMessage("Batch delete completed.");
+    } finally {
+      setIsDeletingSelected(false);
     }
-    await deleteNodes(selectedNodes.map((node) => node.key));
-    clearSelection();
-    setMessage("Batch delete completed.");
   };
 
   const runAdvancedSearch = async () => {
@@ -468,7 +508,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
           />
           <button
             type="button"
-            className="ml-auto rounded-md border border-app-border/20 bg-white/[0.04] px-2 py-1 text-xs text-app-muted hover:text-app-text"
+            className="ml-auto rounded-md border border-app-border/20 bg-white/[0.04] px-2 py-1 text-sm text-app-muted hover:text-app-text"
             onClick={() => setAdvancedOpen(true)}
           >
             <Filter className="mr-1 inline h-3.5 w-3.5" />
@@ -477,7 +517,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
           {advancedResults ? (
             <button
               type="button"
-              className="rounded-md border border-app-border/20 bg-white/[0.04] px-2 py-1 text-xs text-app-muted hover:text-app-text"
+              className="rounded-md border border-app-border/20 bg-white/[0.04] px-2 py-1 text-sm text-app-muted hover:text-app-text"
               onClick={clearAdvancedSearch}
             >
               Clear
@@ -485,27 +525,27 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
           ) : null}
         </div>
         {selectedNodes.length > 0 ? (
-          <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-app-border/20 bg-white/[0.04] px-3 py-2 text-xs text-app-muted">
+          <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-app-border/20 bg-white/[0.04] px-3 py-2 text-sm text-app-muted">
             <span className="text-app-text">
               {selectedNodes.length} selected
             </span>
             <button
               className="rounded border border-app-border/20 px-2 py-1 hover:text-app-text"
-              onClick={() => void moveSelected()}
+              onClick={openMoveDialog}
             >
               <MoveRight className="mr-1 inline h-3.5 w-3.5" />
               Move
             </button>
             <button
               className="rounded border border-app-border/20 px-2 py-1 hover:text-app-text"
-              onClick={() => void renameSelected()}
+              onClick={openRenameDialog}
             >
               <PencilLine className="mr-1 inline h-3.5 w-3.5" />
               Rename
             </button>
             <button
               className="rounded border border-rose-500/40 px-2 py-1 text-rose-200"
-              onClick={() => void deleteSelected()}
+              onClick={openDeleteDialog}
             >
               <Trash2 className="mr-1 inline h-3.5 w-3.5" />
               Delete
@@ -519,10 +559,8 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
           </div>
         ) : null}
         <div className="min-h-0 flex-1 overflow-auto">
-          {isLoading ? (
-            <LoadingIndicator text="Loading files..." />
-          ) : null}
-          {error ? <p className="text-xs text-rose-300">{error}</p> : null}
+          {isLoading ? <LoadingIndicator text="Loading files..." /> : null}
+          {error ? <p className="text-sm text-rose-300">{error}</p> : null}
           {!isLoading && !error ? (
             <ExplorerTable
               nodes={visibleNodes}
@@ -570,7 +608,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
             }}
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-xs text-app-muted">
+          <div className="flex h-full items-center justify-center text-sm text-app-muted">
             Select a file to view details
           </div>
         )}
@@ -578,7 +616,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
 
       {nodeMenu ? (
         <div
-          className="glass-shell fixed z-50 min-w-52 rounded-xl border border-white/20 p-1.5 text-xs shadow-[0_14px_36px_rgba(0,0,0,0.45)]"
+          className="glass-shell fixed z-50 min-w-52 rounded-xl border border-white/20 p-1.5 text-sm shadow-[0_14px_36px_rgba(0,0,0,0.45)]"
           style={{ left: nodeMenu.x, top: nodeMenu.y }}
           onClick={(event) => event.stopPropagation()}
         >
@@ -679,7 +717,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
 
       {backgroundMenu ? (
         <div
-          className="glass-shell fixed z-50 min-w-44 rounded-xl border border-white/20 p-1.5 text-xs shadow-[0_14px_36px_rgba(0,0,0,0.45)]"
+          className="glass-shell fixed z-50 min-w-44 rounded-xl border border-white/20 p-1.5 text-sm shadow-[0_14px_36px_rgba(0,0,0,0.45)]"
           style={{ left: backgroundMenu.x, top: backgroundMenu.y }}
           onClick={(event) => event.stopPropagation()}
         >
@@ -715,7 +753,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
             <h3 className="text-sm font-semibold text-app-text">
               Confirm delete
             </h3>
-            <p className="mt-2 text-xs text-app-muted break-all">
+            <p className="mt-2 text-sm text-app-muted break-all">
               {confirmDelete.kind === "folder"
                 ? "Delete this folder and all files/subfolders inside?"
                 : "Delete this file?"}
@@ -725,16 +763,158 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <button
-                className="rounded border border-app-border/20 px-3 py-1.5 text-xs"
+                className="rounded border border-app-border/20 px-3 py-1.5 text-sm"
                 onClick={() => setConfirmDelete(null)}
               >
                 Cancel
               </button>
               <button
-                className="rounded border border-rose-500/40 bg-rose-500/20 px-3 py-1.5 text-xs text-rose-200"
+                className="rounded border border-rose-500/40 bg-rose-500/20 px-3 py-1.5 text-sm text-rose-200"
                 onClick={() => void executeDelete()}
               >
                 Confirm delete
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {moveDialogOpen ? (
+        <div className="overlay-backdrop fixed inset-0 z-40 flex items-center justify-center p-4">
+          <div className="glass-shell flex max-h-[80%] w-full max-w-md flex-col rounded-app p-5">
+            <h3 className="text-sm font-semibold text-app-text">
+              Move selected items
+            </h3>
+            <p className="mt-2 text-sm text-app-muted">
+              Choose the destination folder for {selectedNodes.length} selected
+              item(s).
+            </p>
+            <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-scroll pr-1">
+              {moveFolderOptions.map((folder) => (
+                <button
+                  key={folder.key || "root"}
+                  type="button"
+                  disabled={isMovingSelected}
+                  className={`blue-focus flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm ${
+                    moveDestination === folder.key
+                      ? "border-accent bg-accent-soft text-app-text"
+                      : "border-app-border/20 bg-white/[0.04] text-app-muted hover:text-app-text"
+                  }`}
+                  onClick={() => setMoveDestination(folder.key)}
+                >
+                  <Folder className="h-3.5 w-3.5 shrink-0 text-accent" />
+                  <span className="truncate">{folder.label}</span>
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                disabled={isMovingSelected}
+                className="rounded border border-app-border/20 px-3 py-1.5 text-sm"
+                onClick={() => setMoveDialogOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                disabled={isMovingSelected}
+                className="rounded border border-accent bg-accent-soft px-3 py-1.5 text-sm text-app-text"
+                onClick={() => void moveSelected()}
+              >
+                {isMovingSelected ? (
+                  <LoadingIndicator text="Moving..." />
+                ) : (
+                  "Continue"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {renameDialogOpen ? (
+        <div className="overlay-backdrop fixed inset-0 z-40 flex items-center justify-center p-4">
+          <div className="glass-shell w-full max-w-md rounded-app p-5">
+            <h3 className="text-sm font-semibold text-app-text">
+              Rename selected items
+            </h3>
+            <p className="mt-2 text-xs text-app-muted">
+              Enter a base name. vor2 will rename items as base-1, base-2, and
+              keep file extensions.
+            </p>
+            <label className="mt-4 block text-xs text-app-muted">
+              Base name
+              <input
+                autoFocus
+                disabled={isRenamingSelected}
+                className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text"
+                value={renameBaseName}
+                onChange={(event) => setRenameBaseName(event.target.value)}
+                placeholder="new-name"
+              />
+            </label>
+            <div className="mt-3 rounded-lg border border-app-border/20 bg-white/[0.04] px-3 py-2 text-[11px] text-app-soft">
+              Example: {renameBaseName.trim() || "new-name"}-1
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                disabled={isRenamingSelected}
+                className="rounded border border-app-border/20 px-3 py-1.5 text-xs"
+                onClick={() => setRenameDialogOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                disabled={isRenamingSelected || !renameBaseName.trim()}
+                className="rounded border border-accent bg-accent-soft px-3 py-1.5 text-xs text-app-text disabled:opacity-60"
+                onClick={() => void renameSelected()}
+              >
+                {isRenamingSelected ? (
+                  <LoadingIndicator text="Renaming..." />
+                ) : (
+                  "Continue"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {deleteDialogOpen ? (
+        <div className="overlay-backdrop fixed inset-0 z-40 flex items-center justify-center p-4">
+          <div className="glass-shell w-full max-w-md rounded-app p-5">
+            <h3 className="text-sm font-semibold text-app-text">
+              Delete selected items
+            </h3>
+            <p className="mt-2 text-xs text-app-muted">
+              Delete {selectedNodes.length} selected item(s)? Folders include
+              all subfolders and files.
+            </p>
+            <div className="mt-4 max-h-48 space-y-1 overflow-y-scroll rounded-lg border border-app-border/20 bg-white/[0.04] p-2">
+              {selectedNodes.map((node) => (
+                <p key={node.id} className="truncate text-[11px] text-app-soft">
+                  {node.key}
+                </p>
+              ))}
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                disabled={isDeletingSelected}
+                className="rounded border border-app-border/20 px-3 py-1.5 text-xs"
+                onClick={() => setDeleteDialogOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                disabled={isDeletingSelected}
+                className="rounded border border-rose-500/40 bg-rose-500/20 px-3 py-1.5 text-xs text-rose-200 disabled:opacity-60"
+                onClick={() => void deleteSelected()}
+              >
+                {isDeletingSelected ? (
+                  <LoadingIndicator
+                    className="text-rose-200"
+                    spinnerClassName="border-rose-400/30 border-t-rose-200"
+                    text="Deleting..."
+                  />
+                ) : (
+                  "Confirm delete"
+                )}
               </button>
             </div>
           </div>
@@ -746,7 +926,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
             <h3 className="text-sm font-semibold text-app-text">
               Create Expiring Link
             </h3>
-            <p className="mt-2 text-xs text-app-muted break-all">
+            <p className="mt-2 text-sm text-app-muted break-all">
               {expiringDialogNode.name}
             </p>
             <div className="mt-4 grid grid-cols-4 gap-2">
@@ -754,7 +934,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
                 <button
                   key={value}
                   type="button"
-                  className={`rounded border px-2 py-1.5 text-xs ${
+                  className={`rounded border px-2 py-1.5 text-sm ${
                     Number(expiringMinutes) === value
                       ? "border-accent bg-accent-soft text-app-text"
                       : "border-app-border/20 bg-white/[0.04] text-app-muted hover:text-app-text"
@@ -765,7 +945,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
                 </button>
               ))}
             </div>
-            <label className="mt-3 block text-xs text-app-muted">
+            <label className="mt-3 block text-sm text-app-muted">
               Custom minutes
               <input
                 type="number"
@@ -777,13 +957,13 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
             </label>
             <div className="mt-4 flex justify-end gap-2">
               <button
-                className="rounded border border-app-border/20 px-3 py-1.5 text-xs"
+                className="rounded border border-app-border/20 px-3 py-1.5 text-sm"
                 onClick={() => setExpiringDialogNode(null)}
               >
                 Cancel
               </button>
               <button
-                className="rounded border border-accent bg-accent-soft px-3 py-1.5 text-xs text-app-text"
+                className="rounded border border-accent bg-accent-soft px-3 py-1.5 text-sm text-app-text"
                 onClick={() => {
                   const ttl = Number(expiringMinutes);
                   if (!Number.isFinite(ttl) || ttl <= 0) {
@@ -807,7 +987,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
             <h3 className="text-sm font-semibold text-app-text">
               Advanced Search
             </h3>
-            <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-app-muted">
+            <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-app-muted">
               <label className="col-span-2">
                 Search pattern
                 <input
@@ -954,19 +1134,19 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
             </div>
             <div className="mt-4 flex justify-end gap-2">
               <button
-                className="rounded border border-app-border/20 px-3 py-1.5 text-xs"
+                className="rounded border border-app-border/20 px-3 py-1.5 text-sm"
                 onClick={() => setAdvancedOpen(false)}
               >
                 Cancel
               </button>
               <button
-                className="rounded border border-app-border/20 px-3 py-1.5 text-xs"
+                className="rounded border border-app-border/20 px-3 py-1.5 text-sm"
                 onClick={clearAdvancedSearch}
               >
                 Clear
               </button>
               <button
-                className="rounded border border-accent bg-accent-soft px-3 py-1.5 text-xs text-app-text"
+                className="rounded border border-accent bg-accent-soft px-3 py-1.5 text-sm text-app-text"
                 onClick={() => void runAdvancedSearch()}
               >
                 Search

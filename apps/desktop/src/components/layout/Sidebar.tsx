@@ -190,25 +190,28 @@ export function Sidebar({
         </div>
 
         <div className="mt-3 rounded-xl border border-app-border/20 bg-white/[0.03] p-3">
-          <p className="text-xs text-app-muted">Storage Usage</p>
+          <p className="text-sm text-app-muted">Storage Usage</p>
           {usageLoading ? (
-            <LoadingIndicator className="mt-2 text-app-soft" text="Loading usage..." />
+            <LoadingIndicator
+              className="mt-2 text-app-soft"
+              text="Loading usage..."
+            />
           ) : usage ? (
             <>
-              <p className="mt-2 text-xs text-app-text">
+              <p className="mt-2 text-sm text-app-text">
                 {formatBytes(usage.totalSizeBytes)}
               </p>
-              <p className="mt-1 text-[11px] text-app-soft">
+              <p className="mt-1 text-sm text-app-soft">
                 {usage.objectCount} objects
               </p>
-              <p className="mt-2 text-[10px] text-app-soft">
+              <p className="mt-2 text-sm text-app-soft">
                 {usage.source === "graphql"
                   ? "Cloudflare GraphQL metrics"
                   : "Live bucket scan (R2 API)"}
               </p>
             </>
           ) : (
-            <p className="mt-2 text-xs text-app-soft">Could not load usage.</p>
+            <p className="mt-2 text-sm text-app-soft">Could not load usage.</p>
           )}
         </div>
       </div>
