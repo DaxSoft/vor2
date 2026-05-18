@@ -132,6 +132,12 @@ input[type="checkbox"]:disabled {
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
+.connection-dialog-shell {
+  background: rgba(10, 15, 25, 0.72);
+  backdrop-filter: blur(46px) saturate(155%);
+  -webkit-backdrop-filter: blur(46px) saturate(155%);
+}
+
 .glass-panel {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02)),
@@ -162,6 +168,10 @@ input[type="checkbox"]:disabled {
   box-shadow:
     0 18px 56px rgba(25, 52, 95, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+[data-theme="light"] .connection-dialog-shell {
+  background: rgba(249, 252, 255, 0.84);
 }
 
 [data-theme="light"] .glass-panel {

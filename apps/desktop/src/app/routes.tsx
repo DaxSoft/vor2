@@ -44,7 +44,7 @@ export function AppRoutes() {
   if (route === ROUTES.ONBOARDING) {
     return (
       <div className="flex h-screen w-screen items-center justify-center app-background px-6">
-        <div className="glass-shell w-full max-w-xl rounded-app p-6">
+        <div className="glass-shell connection-dialog-shell w-full max-w-xl rounded-app p-6">
           <ConnectionForm onCreated={() => undefined} />
         </div>
       </div>

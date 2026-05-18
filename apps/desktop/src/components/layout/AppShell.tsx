@@ -308,7 +308,7 @@ export function AppShell() {
       {showConnectionForm ? (
         <div className="overlay-backdrop fixed inset-0 z-40 flex h-dvh w-dvw items-center justify-center overflow-hidden p-4">
           <div
-            className="glass-shell flex w-full max-w-xl flex-col overflow-hidden rounded-app p-6"
+            className="glass-shell connection-dialog-shell flex w-full max-w-xl flex-col overflow-hidden rounded-app p-6"
             style={{ maxHeight: "calc(100dvh - 32px)" }}
           >
             <div className="min-h-0 overflow-y-auto overflow-x-hidden pr-1">

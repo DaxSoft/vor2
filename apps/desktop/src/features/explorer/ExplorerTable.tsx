@@ -123,14 +123,14 @@ export function ExplorerTable({
                 onChange={() => onToggleSelect(node.id)}
               />
             </td>
-            <td className="px-3 py-2">
+            <td className="overflow-hidden px-3 py-2">
               <div className="flex min-w-0 items-center gap-2">
                 {node.kind === "folder" ? (
                   <Folder className="h-4 w-4 shrink-0 text-accent" />
                 ) : (
                   <File className="h-4 w-4 shrink-0 text-accent" />
                 )}
-                <span className="truncate text-app-text">{node.name}</span>
+                <span className="min-w-0 truncate text-app-text" title={node.name}>{node.name}</span>
               </div>
             </td>
             {/* <td className="px-3 py-2 text-app-muted">
