@@ -20,8 +20,10 @@ export function AuthScreen() {
             <img src={logoMark} alt="vor2" className="h-5 w-5" />
           </span>
           <div>
-            <h1 className="text-sm font-semibold text-app-text">vor2</h1>
-            <p className="text-xs text-app-muted">Your Cloudflare R2 files, one click away.</p>
+            <h1 className="text-lg font-bold text-app-text">vor2</h1>
+            <p className="text-xs text-app-muted">
+              Your Cloudflare R2 files, one click away.
+            </p>
           </div>
         </div>
 
@@ -53,7 +55,11 @@ export function AuthScreen() {
                 className="absolute inset-y-0 right-0 flex items-center px-3 text-white hover:text-white/85"
                 onClick={() => setShowPassword((prev) => !prev)}
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
               </button>
             </div>
           </label>
@@ -86,12 +92,30 @@ export function AuthScreen() {
 
         <div className="mt-4 space-y-1 text-xs text-app-soft">
           <p>
-            <span className="font-semibold text-white">Important:</span> all data is stored in a{" "}
-            <span className="font-semibold text-accent">local SQLite database</span>.
+            <span className="font-semibold text-white">Important:</span> all
+            data is stored in a{" "}
+            <span className="font-semibold text-accent">
+              local SQLite database
+            </span>
+            .
           </p>
           <p>
             Your credentials stay on your machine and are{" "}
-            <span className="font-semibold text-white">never stored online by us</span>.
+            <span className="font-semibold text-white">
+              never stored online by us
+            </span>
+            .
+          </p>
+          <p>
+            Check the source code{" "}
+            <a
+              href="https://github.com/DaxSoft/vor2"
+              target="_blank"
+              className="font-semibold text-white"
+            >
+              on GitHub
+            </a>
+            .
           </p>
         </div>
 

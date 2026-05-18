@@ -189,7 +189,7 @@ export function AppShell() {
   }, [theme]);
 
   return (
-    <div data-theme={theme} className="h-screen w-screen overflow-hidden text-app-text app-background">
+    <div data-theme={theme} className="h-dvh w-full max-w-full overflow-hidden text-app-text app-background">
       <div className="mx-4 my-4 flex h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-app glass-shell">
         <TitleBar
           search={search}
@@ -306,22 +306,27 @@ export function AppShell() {
       ) : null}
 
       {showConnectionForm ? (
-        <div className="overlay-backdrop fixed inset-0 z-40 flex items-center justify-center p-4">
-          <div className="glass-shell w-full max-w-xl rounded-app p-6">
-            <ConnectionForm
-              onCreated={() => {
-                setShowConnectionForm(false);
-              }}
-            />
-            <button
-              type="button"
-              className="mt-3 w-full rounded border border-app-border px-3 py-2 text-xs text-app-text hover:border-accent"
-              onClick={() => {
-                setShowConnectionForm(false);
-              }}
-            >
-              Cancel
-            </button>
+        <div className="overlay-backdrop fixed inset-0 z-40 flex h-dvh w-dvw items-center justify-center overflow-hidden p-4">
+          <div
+            className="glass-shell flex w-full max-w-xl flex-col overflow-hidden rounded-app p-6"
+            style={{ maxHeight: "calc(100dvh - 32px)" }}
+          >
+            <div className="min-h-0 overflow-y-auto overflow-x-hidden pr-1">
+              <ConnectionForm
+                onCreated={() => {
+                  setShowConnectionForm(false);
+                }}
+              />
+              <button
+                type="button"
+                className="mt-3 w-full rounded border border-app-border px-3 py-2 text-xs text-app-text hover:border-accent"
+                onClick={() => {
+                  setShowConnectionForm(false);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

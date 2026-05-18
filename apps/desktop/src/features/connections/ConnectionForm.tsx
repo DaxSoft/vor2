@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Cloud, Database } from "lucide-react";
+import { Cloud, Database, LogOut } from "lucide-react";
+import { useAuthStore } from "@/features/auth/auth.store";
 import { useConnectionStore } from "./connection.store";
 import type { R2ConnectionCreateInput } from "./connection.types";
 
@@ -50,6 +51,8 @@ export function ConnectionForm({ onCreated }: { onCreated: () => void }) {
   );
   const error = useConnectionStore((state) => state.error);
   const isLoading = useConnectionStore((state) => state.isLoading);
+  const signOut = useAuthStore((state) => state.signOut);
+  const authLoading = useAuthStore((state) => state.isLoading);
   const [value, setValue] = useState<R2ConnectionCreateInput>(initialValue);
   const provider = value.provider;
   const fields = connectionFields.map((field) =>
@@ -60,14 +63,14 @@ export function ConnectionForm({ onCreated }: { onCreated: () => void }) {
           placeholder:
             provider === "r2"
               ? "https://<account-id>.r2.cloudflarestorage.com"
-              : "Optional, e.g. https://s3.us-east-1.amazonaws.com"
+              : "Optional, e.g. https://s3.us-east-1.amazonaws.com",
         }
-      : field
+      : field,
   );
 
   return (
     <form
-      className="space-y-3"
+      className="min-w-0 space-y-3 overflow-x-hidden max-h-[80vh] p-3"
       onSubmit={(event) => {
         event.preventDefault();
         void createConnection(value).then(() => {
@@ -75,15 +78,28 @@ export function ConnectionForm({ onCreated }: { onCreated: () => void }) {
         });
       }}
     >
-      <h2 className="text-sm font-semibold text-app-text">
-        Add storage connection
-      </h2>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-app-text">
+          Add storage connection
+        </h2>
+        <button
+          type="button"
+          disabled={authLoading}
+          className="blue-focus inline-flex items-center gap-1.5 rounded-lg border border-app-border/20 bg-white/[0.04] px-2.5 py-1.5 text-xs text-app-muted hover:text-app-text disabled:opacity-60"
+          onClick={() => {
+            void signOut();
+          }}
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          Sign out
+        </button>
+      </div>
+      <div className="grid min-w-0 grid-cols-2 gap-2">
         {(["r2", "s3"] as const).map((item) => (
           <button
             key={item}
             type="button"
-            className={`blue-focus rounded-lg border px-3 py-2 text-left text-xs ${
+            className={`blue-focus min-w-0 rounded-lg border px-3 py-2 text-left text-xs ${
               provider === item
                 ? "border-accent bg-accent-soft text-app-text"
                 : "border-app-border/20 bg-white/[0.04] text-app-muted"
@@ -92,34 +108,71 @@ export function ConnectionForm({ onCreated }: { onCreated: () => void }) {
               setValue((prev) => ({
                 ...prev,
                 provider: item,
-                region: item === "r2" ? "auto" : prev.region === "auto" ? "us-east-1" : prev.region,
-                endpoint: item === "s3" && prev.endpoint.includes("r2.cloudflarestorage.com") ? "" : prev.endpoint
+                region:
+                  item === "r2"
+                    ? "auto"
+                    : prev.region === "auto"
+                      ? "us-east-1"
+                      : prev.region,
+                endpoint:
+                  item === "s3" &&
+                  prev.endpoint.includes("r2.cloudflarestorage.com")
+                    ? ""
+                    : prev.endpoint,
               }))
             }
           >
-            <span className="flex items-center gap-2 font-semibold">
-              {item === "r2" ? <Cloud className="h-4 w-4 text-accent" /> : <Database className="h-4 w-4 text-amber-300" />}
-              {item === "r2" ? "Cloudflare R2" : "Amazon S3"}
+            <span className="flex min-w-0 items-center gap-2 font-semibold">
+              {item === "r2" ? (
+                <Cloud className="h-4 w-4 text-accent" />
+              ) : (
+                <Database className="h-4 w-4 text-amber-300" />
+              )}
+              <span className="truncate">
+                {item === "r2" ? "Cloudflare R2" : "Amazon S3"}
+              </span>
             </span>
             <span className="mt-1 block text-[11px] text-app-soft">
-              {item === "r2" ? "Account endpoint + R2 API token." : "Region + IAM access keys."}
+              {item === "r2"
+                ? "Account endpoint + R2 API token."
+                : "Region + IAM access keys."}
             </span>
           </button>
         ))}
       </div>
-      <details className="rounded-lg border border-app-border/20 bg-white/[0.04] px-3 py-2 text-xs text-app-muted">
-        <summary className="cursor-pointer text-app-text">Where to get the connection values</summary>
+      <details className="max-w-full overflow-x-hidden rounded-lg border border-app-border/20 bg-white/[0.04] px-3 py-2 text-xs text-app-muted">
+        <summary className="cursor-pointer text-app-text">
+          Where to get the connection values
+        </summary>
         {provider === "r2" ? (
-          <div className="mt-2 space-y-1 text-[11px] leading-5">
-            <p>Cloudflare Dashboard: R2 Object Storage, then Manage R2 API Tokens.</p>
-            <p>Use the account endpoint, bucket name, Access Key ID, Secret Access Key, and optional public bucket URL.</p>
-            <p>Account ID enables Cloudflare R2 analytics when a Cloudflare API token is available.</p>
+          <div className="mt-2 min-w-0 space-y-1 break-words text-[11px] leading-5">
+            <p>
+              Cloudflare Dashboard: R2 Object Storage, then Manage R2 API
+              Tokens.
+            </p>
+            <p>
+              Use the account endpoint, bucket name, Access Key ID, Secret
+              Access Key, and optional public bucket URL.
+            </p>
+            <p>
+              Account ID enables Cloudflare R2 analytics when a Cloudflare API
+              token is available.
+            </p>
           </div>
         ) : (
-          <div className="mt-2 space-y-1 text-[11px] leading-5">
-            <p>AWS Console: IAM, create an access key for a user/role with S3 permissions.</p>
-            <p>Use bucket name, region, Access Key ID, Secret Access Key, and optional custom endpoint for S3-compatible providers.</p>
-            <p>Leave endpoint empty for standard AWS S3; vor2 will use the selected region endpoint.</p>
+          <div className="mt-2 min-w-0 space-y-1 break-words text-[11px] leading-5">
+            <p>
+              AWS Console: IAM, create an access key for a user/role with S3
+              permissions.
+            </p>
+            <p>
+              Use bucket name, region, Access Key ID, Secret Access Key, and
+              optional custom endpoint for S3-compatible providers.
+            </p>
+            <p>
+              Leave endpoint empty for standard AWS S3; vor2 will use the
+              selected region endpoint.
+            </p>
           </div>
         )}
       </details>

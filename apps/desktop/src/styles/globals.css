@@ -26,12 +26,15 @@ body,
   margin: 0;
   height: 100%;
   width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 body {
   font-family: Inter, "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
   color: var(--text);
   background: transparent;
+  overscroll-behavior: none;
 }
 
 .app-background {
