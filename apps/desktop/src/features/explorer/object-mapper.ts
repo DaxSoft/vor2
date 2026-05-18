@@ -1,8 +1,17 @@
-import { buildPublicUrl } from "@r2-explorer/r2/src/path-utils";
-import type { R2ExplorerNode, R2FileNode, R2FolderNode } from "./explorer.types";
+import { buildPublicUrl } from "@vor2/r2/src/path-utils";
+import type {
+  R2ExplorerNode,
+  R2FileNode,
+  R2FolderNode,
+} from "./explorer.types";
 
 interface RawListing {
-  folders: Array<{ key: string; name: string; childCount?: number; totalSizeBytes?: number }>;
+  folders: Array<{
+    key: string;
+    name: string;
+    childCount?: number;
+    totalSizeBytes?: number;
+  }>;
   files: Array<{
     key: string;
     name: string;
@@ -14,7 +23,10 @@ interface RawListing {
   }>;
 }
 
-export function mapListingToNodes(listing: RawListing, publicUrl?: string): R2ExplorerNode[] {
+export function mapListingToNodes(
+  listing: RawListing,
+  publicUrl?: string,
+): R2ExplorerNode[] {
   const folders: R2FolderNode[] = listing.folders.map((folder) => ({
     id: folder.key,
     key: folder.key,
@@ -22,7 +34,7 @@ export function mapListingToNodes(listing: RawListing, publicUrl?: string): R2Ex
     path: folder.key,
     kind: "folder",
     childCount: folder.childCount,
-    totalSizeBytes: folder.totalSizeBytes
+    totalSizeBytes: folder.totalSizeBytes,
   }));
 
   const files: R2FileNode[] = listing.files.map((file) => ({
@@ -37,7 +49,7 @@ export function mapListingToNodes(listing: RawListing, publicUrl?: string): R2Ex
     etag: file.etag,
     storageClass: file.storageClass,
     publicUrl: buildPublicUrl(publicUrl, file.key),
-    isPublic: Boolean(publicUrl)
+    isPublic: Boolean(publicUrl),
   }));
 
   return [...folders, ...files];

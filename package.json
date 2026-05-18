@@ -1,5 +1,5 @@
 {
-  "name": "r2-explorer",
+  "name": "vor2",
   "private": true,
   "version": "0.1.0",
   "packageManager": "yarn@1.22.21",
@@ -8,17 +8,17 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "yarn workspace @r2-explorer/desktop tauri:dev",
-    "desktop:run": "yarn workspace @r2-explorer/desktop tauri:dev",
-    "dev:web": "yarn workspace @r2-explorer/desktop web:dev",
+    "dev": "yarn workspace @vor2/desktop tauri:dev",
+    "desktop:run": "yarn workspace @vor2/desktop tauri:dev",
+    "dev:web": "yarn workspace @vor2/desktop web:dev",
     "build": "turbo run build",
-    "desktop:build": "yarn workspace @r2-explorer/desktop tauri:build",
-    "desktop:build:exe": "yarn workspace @r2-explorer/desktop tauri:build:exe",
-    "desktop:test": "yarn workspace @r2-explorer/desktop test:desktop",
+    "desktop:build": "yarn workspace @vor2/desktop tauri:build",
+    "desktop:build:exe": "yarn workspace @vor2/desktop tauri:build:exe",
+    "desktop:test": "yarn workspace @vor2/desktop test:desktop",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "prisma:generate": "yarn workspace @r2-explorer/database prisma:generate",
-    "prisma:migrate": "yarn workspace @r2-explorer/database prisma:migrate"
+    "prisma:generate": "yarn workspace @vor2/database prisma:generate",
+    "prisma:migrate": "yarn workspace @vor2/database prisma:migrate"
   },
   "devDependencies": {
     "turbo": "^2.0.12"

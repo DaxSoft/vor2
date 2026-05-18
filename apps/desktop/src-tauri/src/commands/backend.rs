@@ -225,7 +225,7 @@ fn run_bridge<T: for<'de> Deserialize<'de>>(action: &str, payload: Value) -> Res
         child = command
             .arg("--silent")
             .arg("workspace")
-            .arg("@r2-explorer/database")
+            .arg("@vor2/database")
             .arg("desktop:bridge")
             .arg(action)
             .current_dir(&root)

@@ -1,5 +1,5 @@
 {
-  "name": "@r2-explorer/database",
+  "name": "@vor2/database",
   "version": "0.1.0",
   "private": true,
   "type": "module",

@@ -14,7 +14,7 @@ import {
   UploadCloud,
 } from "lucide-react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { buildPublicUrl } from "@r2-explorer/r2/src/path-utils";
+import { buildPublicUrl } from "@vor2/r2/src/path-utils";
 import { Breadcrumb } from "./Breadcrumb";
 import { DetailsPanel } from "./DetailsPanel";
 import { ExplorerTable } from "./ExplorerTable";
@@ -55,7 +55,9 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
   const loadPath = useExplorerStore((state) => state.loadPath);
   const openNode = useExplorerStore((state) => state.openNode);
   const selectNode = useExplorerStore((state) => state.selectNode);
-  const toggleNodeSelection = useExplorerStore((state) => state.toggleNodeSelection);
+  const toggleNodeSelection = useExplorerStore(
+    (state) => state.toggleNodeSelection,
+  );
   const selectAllNodes = useExplorerStore((state) => state.selectAllNodes);
   const clearSelection = useExplorerStore((state) => state.clearSelection);
   const renameNode = useExplorerStore((state) => state.renameNode);
@@ -73,10 +75,13 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
     null,
   );
   const [message, setMessage] = useState<string | null>(null);
-  const [expiringDialogNode, setExpiringDialogNode] = useState<R2ExplorerNode | null>(null);
+  const [expiringDialogNode, setExpiringDialogNode] =
+    useState<R2ExplorerNode | null>(null);
   const [expiringMinutes, setExpiringMinutes] = useState("15");
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [advancedResults, setAdvancedResults] = useState<R2ExplorerNode[] | null>(null);
+  const [advancedResults, setAdvancedResults] = useState<
+    R2ExplorerNode[] | null
+  >(null);
   const [advancedSearch, setAdvancedSearch] = useState({
     pattern: "",
     useRegex: false,
@@ -86,7 +91,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
     period: "all",
     fromDate: "",
     toDate: "",
-    quickFilter: "all"
+    quickFilter: "all",
   });
 
   const visibleNodes = useMemo(() => {
@@ -147,7 +152,10 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
     setExpiringMinutes("15");
   };
 
-  const createExpiringLink = async (node: R2ExplorerNode, ttlMinutes: number) => {
+  const createExpiringLink = async (
+    node: R2ExplorerNode,
+    ttlMinutes: number,
+  ) => {
     if (!activeConnectionId || !activeConnection || node.kind !== "file") {
       return;
     }
@@ -272,16 +280,23 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
     if (selectedNodes.length === 0) {
       return;
     }
-    const destination = window.prompt("Move selected to folder prefix", currentPath.replace(/^\//, ""))?.replace(/^\/+|\/+$/g, "");
+    const destination = window
+      .prompt("Move selected to folder prefix", currentPath.replace(/^\//, ""))
+      ?.replace(/^\/+|\/+$/g, "");
     if (destination === undefined) {
       return;
     }
-    const ok = window.confirm(`Move ${selectedNodes.length} item(s) to ${destination || "/"}?`);
+    const ok = window.confirm(
+      `Move ${selectedNodes.length} item(s) to ${destination || "/"}?`,
+    );
     if (!ok) {
       return;
     }
     for (const node of selectedNodes) {
-      await moveNode(node.key, `${destination ? `${destination}/` : ""}${node.name}${node.kind === "folder" ? "/" : ""}`);
+      await moveNode(
+        node.key,
+        `${destination ? `${destination}/` : ""}${node.name}${node.kind === "folder" ? "/" : ""}`,
+      );
     }
     clearSelection();
     setMessage("Batch move completed.");
@@ -291,7 +306,9 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
     if (selectedNodes.length === 0) {
       return;
     }
-    const pattern = window.prompt("Rename pattern. Use {name} and {index}.", "{name}-{index}")?.trim();
+    const pattern = window
+      .prompt("Rename pattern. Use {name} and {index}.", "{name}-{index}")
+      ?.trim();
     if (!pattern) {
       return;
     }
@@ -300,9 +317,21 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
       return;
     }
     for (const [index, node] of selectedNodes.entries()) {
-      const extension = node.kind === "file" && node.name.includes(".") ? `.${node.name.split(".").pop()}` : "";
-      const baseName = node.kind === "file" ? node.name.replace(new RegExp(`${extension.replace(".", "\\.")}$`), "") : node.name;
-      const nextName = pattern.replaceAll("{name}", baseName).replaceAll("{index}", String(index + 1)) + extension;
+      const extension =
+        node.kind === "file" && node.name.includes(".")
+          ? `.${node.name.split(".").pop()}`
+          : "";
+      const baseName =
+        node.kind === "file"
+          ? node.name.replace(
+              new RegExp(`${extension.replace(".", "\\.")}$`),
+              "",
+            )
+          : node.name;
+      const nextName =
+        pattern
+          .replaceAll("{name}", baseName)
+          .replaceAll("{index}", String(index + 1)) + extension;
       await renameNode(node.key, buildRenamedKey(node, nextName));
     }
     clearSelection();
@@ -313,7 +342,9 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
     if (selectedNodes.length === 0) {
       return;
     }
-    const ok = window.confirm(`Delete ${selectedNodes.length} selected item(s)? Folders include all subfolders and files.`);
+    const ok = window.confirm(
+      `Delete ${selectedNodes.length} selected item(s)? Folders include all subfolders and files.`,
+    );
     if (!ok) {
       return;
     }
@@ -326,10 +357,20 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
     if (!activeConnectionId || !activeConnection) {
       return;
     }
-    const daysByPeriod: Record<string, number> = { recent: 1, last7: 7, last15: 15, last30: 30 };
+    const daysByPeriod: Record<string, number> = {
+      recent: 1,
+      last7: 7,
+      last15: 15,
+      last30: 30,
+    };
     const days = daysByPeriod[advancedSearch.period];
-    const fromDate = days ? new Date(Date.now() - days * 86400000).toISOString() : advancedSearch.fromDate || undefined;
-    const toDate = advancedSearch.period === "custom" ? advancedSearch.toDate || undefined : undefined;
+    const fromDate = days
+      ? new Date(Date.now() - days * 86400000).toISOString()
+      : advancedSearch.fromDate || undefined;
+    const toDate =
+      advancedSearch.period === "custom"
+        ? advancedSearch.toDate || undefined
+        : undefined;
     const results = await explorerService.search(
       activeConnectionId,
       activeConnection.bucketName,
@@ -339,12 +380,13 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
         scope: advancedSearch.scope,
         path: currentPath,
         sizeMode: advancedSearch.sizeMode,
-        sizeBytes: Math.max(0, Number(advancedSearch.sizeMb || 0)) * 1024 * 1024,
+        sizeBytes:
+          Math.max(0, Number(advancedSearch.sizeMb || 0)) * 1024 * 1024,
         fromDate,
         toDate,
-        quickFilter: advancedSearch.quickFilter
+        quickFilter: advancedSearch.quickFilter,
       },
-      activeConnection.publicUrl
+      activeConnection.publicUrl,
     );
     setAdvancedResults(results);
     clearSelection();
@@ -362,7 +404,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
       period: "all",
       fromDate: "",
       toDate: "",
-      quickFilter: "all"
+      quickFilter: "all",
     });
   };
 
@@ -443,20 +485,34 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
         </div>
         {selectedNodes.length > 0 ? (
           <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-app-border/20 bg-white/[0.04] px-3 py-2 text-xs text-app-muted">
-            <span className="text-app-text">{selectedNodes.length} selected</span>
-            <button className="rounded border border-app-border/20 px-2 py-1 hover:text-app-text" onClick={() => void moveSelected()}>
+            <span className="text-app-text">
+              {selectedNodes.length} selected
+            </span>
+            <button
+              className="rounded border border-app-border/20 px-2 py-1 hover:text-app-text"
+              onClick={() => void moveSelected()}
+            >
               <MoveRight className="mr-1 inline h-3.5 w-3.5" />
               Move
             </button>
-            <button className="rounded border border-app-border/20 px-2 py-1 hover:text-app-text" onClick={() => void renameSelected()}>
+            <button
+              className="rounded border border-app-border/20 px-2 py-1 hover:text-app-text"
+              onClick={() => void renameSelected()}
+            >
               <PencilLine className="mr-1 inline h-3.5 w-3.5" />
               Rename
             </button>
-            <button className="rounded border border-rose-500/40 px-2 py-1 text-rose-200" onClick={() => void deleteSelected()}>
+            <button
+              className="rounded border border-rose-500/40 px-2 py-1 text-rose-200"
+              onClick={() => void deleteSelected()}
+            >
               <Trash2 className="mr-1 inline h-3.5 w-3.5" />
               Delete
             </button>
-            <button className="rounded border border-app-border/20 px-2 py-1 hover:text-app-text" onClick={clearSelection}>
+            <button
+              className="rounded border border-app-border/20 px-2 py-1 hover:text-app-text"
+              onClick={clearSelection}
+            >
               Cancel
             </button>
           </div>
@@ -686,8 +742,12 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
       {expiringDialogNode?.kind === "file" ? (
         <div className="overlay-backdrop fixed inset-0 z-40 flex items-center justify-center p-4">
           <div className="glass-shell w-full max-w-md rounded-app p-5">
-            <h3 className="text-sm font-semibold text-app-text">Create Expiring Link</h3>
-            <p className="mt-2 text-xs text-app-muted break-all">{expiringDialogNode.name}</p>
+            <h3 className="text-sm font-semibold text-app-text">
+              Create Expiring Link
+            </h3>
+            <p className="mt-2 text-xs text-app-muted break-all">
+              {expiringDialogNode.name}
+            </p>
             <div className="mt-4 grid grid-cols-4 gap-2">
               {TTL_PRESETS_MINUTES.map((value) => (
                 <button
@@ -743,26 +803,64 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
       {advancedOpen ? (
         <div className="overlay-backdrop fixed inset-0 z-40 flex items-center justify-center p-4">
           <div className="glass-shell w-full max-w-xl rounded-app p-5">
-            <h3 className="text-sm font-semibold text-app-text">Advanced Search</h3>
+            <h3 className="text-sm font-semibold text-app-text">
+              Advanced Search
+            </h3>
             <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-app-muted">
               <label className="col-span-2">
                 Search pattern
-                <input className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text" value={advancedSearch.pattern} onChange={(event) => setAdvancedSearch((prev) => ({ ...prev, pattern: event.target.value }))} />
+                <input
+                  className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text"
+                  value={advancedSearch.pattern}
+                  onChange={(event) =>
+                    setAdvancedSearch((prev) => ({
+                      ...prev,
+                      pattern: event.target.value,
+                    }))
+                  }
+                />
               </label>
               <label className="flex items-center gap-2">
-                <input type="checkbox" checked={advancedSearch.useRegex} onChange={(event) => setAdvancedSearch((prev) => ({ ...prev, useRegex: event.target.checked }))} />
+                <input
+                  type="checkbox"
+                  checked={advancedSearch.useRegex}
+                  onChange={(event) =>
+                    setAdvancedSearch((prev) => ({
+                      ...prev,
+                      useRegex: event.target.checked,
+                    }))
+                  }
+                />
                 Use regular expression
               </label>
               <label>
                 Scope
-                <select className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text" value={advancedSearch.scope} onChange={(event) => setAdvancedSearch((prev) => ({ ...prev, scope: event.target.value as "current" | "anywhere" }))}>
+                <select
+                  className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text"
+                  value={advancedSearch.scope}
+                  onChange={(event) =>
+                    setAdvancedSearch((prev) => ({
+                      ...prev,
+                      scope: event.target.value as "current" | "anywhere",
+                    }))
+                  }
+                >
                   <option value="current">Current folder</option>
                   <option value="anywhere">Anywhere in bucket</option>
                 </select>
               </label>
               <label>
                 File size
-                <select className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text" value={advancedSearch.sizeMode} onChange={(event) => setAdvancedSearch((prev) => ({ ...prev, sizeMode: event.target.value as "any" | "less" | "more" }))}>
+                <select
+                  className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text"
+                  value={advancedSearch.sizeMode}
+                  onChange={(event) =>
+                    setAdvancedSearch((prev) => ({
+                      ...prev,
+                      sizeMode: event.target.value as "any" | "less" | "more",
+                    }))
+                  }
+                >
                   <option value="any">Any</option>
                   <option value="less">Less than</option>
                   <option value="more">More than</option>
@@ -770,11 +868,31 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
               </label>
               <label>
                 Size MB (0 = all)
-                <input type="number" min={0} className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text" value={advancedSearch.sizeMb} onChange={(event) => setAdvancedSearch((prev) => ({ ...prev, sizeMb: event.target.value }))} />
+                <input
+                  type="number"
+                  min={0}
+                  className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text"
+                  value={advancedSearch.sizeMb}
+                  onChange={(event) =>
+                    setAdvancedSearch((prev) => ({
+                      ...prev,
+                      sizeMb: event.target.value,
+                    }))
+                  }
+                />
               </label>
               <label>
                 Period
-                <select className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text" value={advancedSearch.period} onChange={(event) => setAdvancedSearch((prev) => ({ ...prev, period: event.target.value }))}>
+                <select
+                  className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text"
+                  value={advancedSearch.period}
+                  onChange={(event) =>
+                    setAdvancedSearch((prev) => ({
+                      ...prev,
+                      period: event.target.value,
+                    }))
+                  }
+                >
                   <option value="all">All</option>
                   <option value="recent">Recent</option>
                   <option value="last7">Last 7 days</option>
@@ -785,7 +903,16 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
               </label>
               <label>
                 Quick filter
-                <select className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text" value={advancedSearch.quickFilter} onChange={(event) => setAdvancedSearch((prev) => ({ ...prev, quickFilter: event.target.value }))}>
+                <select
+                  className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text"
+                  value={advancedSearch.quickFilter}
+                  onChange={(event) =>
+                    setAdvancedSearch((prev) => ({
+                      ...prev,
+                      quickFilter: event.target.value,
+                    }))
+                  }
+                >
                   <option value="all">All</option>
                   <option value="images">Images</option>
                   <option value="documents">Documents</option>
@@ -797,17 +924,52 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
               </label>
               <label>
                 From
-                <input type="date" className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text" value={advancedSearch.fromDate} onChange={(event) => setAdvancedSearch((prev) => ({ ...prev, fromDate: event.target.value }))} />
+                <input
+                  type="date"
+                  className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text"
+                  value={advancedSearch.fromDate}
+                  onChange={(event) =>
+                    setAdvancedSearch((prev) => ({
+                      ...prev,
+                      fromDate: event.target.value,
+                    }))
+                  }
+                />
               </label>
               <label>
                 To
-                <input type="date" className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text" value={advancedSearch.toDate} onChange={(event) => setAdvancedSearch((prev) => ({ ...prev, toDate: event.target.value }))} />
+                <input
+                  type="date"
+                  className="blue-focus mt-1 w-full rounded border border-app-border/20 bg-white/[0.05] px-2 py-1.5 text-app-text"
+                  value={advancedSearch.toDate}
+                  onChange={(event) =>
+                    setAdvancedSearch((prev) => ({
+                      ...prev,
+                      toDate: event.target.value,
+                    }))
+                  }
+                />
               </label>
             </div>
             <div className="mt-4 flex justify-end gap-2">
-              <button className="rounded border border-app-border/20 px-3 py-1.5 text-xs" onClick={() => setAdvancedOpen(false)}>Cancel</button>
-              <button className="rounded border border-app-border/20 px-3 py-1.5 text-xs" onClick={clearAdvancedSearch}>Clear</button>
-              <button className="rounded border border-accent bg-accent-soft px-3 py-1.5 text-xs text-app-text" onClick={() => void runAdvancedSearch()}>Search</button>
+              <button
+                className="rounded border border-app-border/20 px-3 py-1.5 text-xs"
+                onClick={() => setAdvancedOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="rounded border border-app-border/20 px-3 py-1.5 text-xs"
+                onClick={clearAdvancedSearch}
+              >
+                Clear
+              </button>
+              <button
+                className="rounded border border-accent bg-accent-soft px-3 py-1.5 text-xs text-app-text"
+                onClick={() => void runAdvancedSearch()}
+              >
+                Search
+              </button>
             </div>
           </div>
         </div>

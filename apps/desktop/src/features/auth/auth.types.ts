@@ -1,4 +1,4 @@
-import type { AuthSession } from "@r2-explorer/auth/src/session";
+import type { AuthSession } from "@vor2/auth/src/session";
 
 export interface AuthStoreState {
   isLoading: boolean;
