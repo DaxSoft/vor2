@@ -51,7 +51,7 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
     null;
 
   return (
-    <div className="glass-panel w-full max-w-md rounded-panel border border-app-border p-4 text-sm text-app-muted">
+    <div className="glass-panel w-full max-w-md rounded-panel border border-app-border p-4 text-sm text-app-muted relative">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-app-text">Settings</h2>
         <button

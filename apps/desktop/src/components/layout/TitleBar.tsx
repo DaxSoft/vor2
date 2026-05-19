@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import logoMark from "@/assets/logo-mark.svg";
+import { DashboardBackgroundImage } from "@vor2/ui/src/primitives/default-background";
 
 export function TitleBar({
   search,
@@ -51,7 +52,7 @@ export function TitleBar({
   return (
     <header
       data-tauri-drag-region
-      className="flex items-center gap-3 border-b border-app-border/20 px-4 py-3"
+      className="flex items-center gap-3 border-b border-app-border/20 px-4 py-3 relative"
       onMouseDown={(event) => {
         if (event.button !== 0) {
           return;
@@ -63,6 +64,11 @@ export function TitleBar({
         onStartDragging();
       }}
     >
+      <DashboardBackgroundImage
+        url="https://r2.travelerspentales.com/files/bg-1.png"
+        opacity={0.8}
+      />
+
       <div data-tauri-drag-region className="flex items-center gap-2">
         <img src={logoMark} alt="vor2" className="h-8 w-8" />
         <span

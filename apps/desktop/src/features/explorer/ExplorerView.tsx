@@ -579,7 +579,7 @@ export function ExplorerView({ onUpload, onNewFolder }: ExplorerViewProps) {
             />
           ) : null}
         </div>
-        <div className="mt-2 flex items-center justify-between border-t border-app-border/20 pt-2 text-[11px] text-app-soft">
+        <div className="mt-2 flex items-center justify-between border-t border-app-border/20 pt-2 text-sm text-app-soft">
           <span>{visibleNodes.length} items</span>
           <span>
             {selectedFile

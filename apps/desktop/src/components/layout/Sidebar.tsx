@@ -109,7 +109,7 @@ export function Sidebar({
               <button
                 key={connection.id}
                 type="button"
-                className={`flex w-full items-center gap-2 rounded-lg border px-2 py-2 text-left text-sm ${
+                className={`flex min-w-0 w-full items-center gap-2 rounded-lg border px-2 py-2 text-left text-sm ${
                   connection.id === activeConnectionId
                     ? "border-accent/60 bg-accent-soft text-app-text"
                     : "border-white/5 bg-white/[0.02] text-app-muted hover:bg-white/[0.05]"
@@ -117,7 +117,12 @@ export function Sidebar({
                 onClick={() => setActiveConnection(connection.id)}
               >
                 <Database className="h-4 w-4 shrink-0" />
-                <span className="truncate">{connection.bucketName}</span>
+                <span
+                  className="min-w-0 truncate"
+                  title={connection.bucketName}
+                >
+                  {connection.bucketName}
+                </span>
               </button>
             ))}
           </div>
@@ -140,7 +145,7 @@ export function Sidebar({
           <div className="min-h-0 flex-1 space-y-1 overflow-auto pr-1">
             <button
               type="button"
-              className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs ${
+              className={`flex min-w-0 w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs ${
                 currentPath === "/"
                   ? "bg-accent-soft text-app-text"
                   : "text-app-muted hover:bg-white/[0.06]"
@@ -150,7 +155,7 @@ export function Sidebar({
               }}
             >
               <Folder className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">/</span>
+              <span className="min-w-0 truncate">/</span>
             </button>
             {pathParts.map((part, index) => {
               const path = `/${pathParts.slice(0, index + 1).join("/")}`;
@@ -158,7 +163,7 @@ export function Sidebar({
                 <button
                   key={path}
                   type="button"
-                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs ${
+                  className={`flex min-w-0 w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm ${
                     currentPath === path
                       ? "bg-accent-soft text-app-text"
                       : "text-app-muted hover:bg-white/[0.06]"
@@ -169,7 +174,9 @@ export function Sidebar({
                   }}
                 >
                   <Folder className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{part}</span>
+                  <span className="min-w-0 truncate" title={part}>
+                    {part}
+                  </span>
                 </button>
               );
             })}
@@ -177,13 +184,18 @@ export function Sidebar({
               <button
                 key={folder.id}
                 type="button"
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-app-muted hover:bg-white/[0.06]"
+                className="flex min-w-0 w-full max-w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm text-app-muted hover:bg-white/[0.06]"
                 onClick={() => {
                   void loadPath(`/${folder.key.replace(/\/$/, "")}`);
                 }}
               >
                 <Folder className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{folder.name}</span>
+                <span
+                  className="min-w-0 truncate max-w-[164px]"
+                  title={folder.name}
+                >
+                  {folder.name}
+                </span>
               </button>
             ))}
           </div>

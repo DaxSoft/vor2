@@ -10,11 +10,11 @@ export function Breadcrumb({
   const parts = currentPath.replace(/^\//, "").split("/").filter(Boolean);
 
   return (
-    <div className="flex items-center gap-2 text-sm text-app-muted">
+    <div className="flex min-w-0 items-center gap-2 overflow-hidden text-sm text-app-muted">
       <button
         type="button"
         onClick={() => onOpen("/")}
-        className="hover:text-app-text"
+        className="shrink-0 hover:text-app-text"
       >
         <span className="inline-flex items-center gap-1">
           <Folder className="h-3.5 w-3.5" />
@@ -24,12 +24,13 @@ export function Breadcrumb({
       {parts.map((part, index) => {
         const path = `/${parts.slice(0, index + 1).join("/")}`;
         return (
-          <div key={path} className="flex items-center gap-2">
-            <ChevronRight className="h-3 w-3" />
+          <div key={path} className="flex min-w-0 items-center gap-2">
+            <ChevronRight className="h-3 w-3 shrink-0" />
             <button
               type="button"
               onClick={() => onOpen(path)}
-              className="hover:text-app-text"
+              className="min-w-0 max-w-40 truncate hover:text-app-text"
+              title={part}
             >
               {part}
             </button>

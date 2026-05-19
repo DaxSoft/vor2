@@ -18,6 +18,7 @@ import {
   startDraggingWindow,
   toggleMaximizeWindow,
 } from "@/lib/desktop-window";
+import { DashboardBackgroundImage } from "@vor2/ui/src/primitives/default-background";
 
 interface FileDialogEntry {
   path: string;
@@ -139,8 +140,11 @@ export function AppShell() {
       return;
     }
     const sync = () => {
-      void invoke("sync_connection_folders", { connectionId: activeConnection.id }).then((result) => {
-        const uploaded = (result as { uploaded?: number } | null)?.uploaded ?? 0;
+      void invoke("sync_connection_folders", {
+        connectionId: activeConnection.id,
+      }).then((result) => {
+        const uploaded =
+          (result as { uploaded?: number } | null)?.uploaded ?? 0;
         if (uploaded > 0) {
           void refresh();
         }
@@ -189,7 +193,10 @@ export function AppShell() {
   }, [theme]);
 
   return (
-    <div data-theme={theme} className="h-dvh w-full max-w-full overflow-hidden text-app-text app-background">
+    <div
+      data-theme={theme}
+      className="h-dvh w-full max-w-full overflow-hidden text-app-text app-background relative"
+    >
       <div className="mx-4 my-4 flex h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-app glass-shell">
         <TitleBar
           search={search}
@@ -308,7 +315,7 @@ export function AppShell() {
       {showConnectionForm ? (
         <div className="overlay-backdrop fixed inset-0 z-40 flex h-dvh w-dvw items-center justify-center overflow-hidden p-4">
           <div
-            className="glass-shell flex w-full max-w-xl flex-col overflow-hidden rounded-app p-6"
+            className="glass-shell connection-dialog-shell flex w-full max-w-xl flex-col overflow-hidden rounded-app p-6"
             style={{ maxHeight: "calc(100dvh - 32px)" }}
           >
             <div className="min-h-0 overflow-y-auto overflow-x-hidden pr-1">

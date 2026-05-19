@@ -58,6 +58,26 @@ const isAutoR2Endpoint = (endpoint: string, accountId: string) => {
   return endpoint.trim() === r2EndpointFromAccountId(accountId);
 };
 
+const s3PublicUrlFromBucketRegion = (bucketName: string, region: string) => {
+  const bucket = bucketName.trim();
+  const cleanRegion = region.trim();
+  if (!bucket || !cleanRegion || cleanRegion === "auto") {
+    return "";
+  }
+  return `https://${bucket}.s3.${cleanRegion}.amazonaws.com`;
+};
+
+const isAutoS3PublicUrl = (
+  publicUrl: string | undefined,
+  bucketName: string,
+  region: string,
+) => {
+  if (!publicUrl?.trim()) {
+    return true;
+  }
+  return publicUrl.trim() === s3PublicUrlFromBucketRegion(bucketName, region);
+};
+
 export function ConnectionForm({ onCreated }: { onCreated: () => void }) {
   const createConnection = useConnectionStore(
     (state) => state.createConnection,
@@ -68,18 +88,35 @@ export function ConnectionForm({ onCreated }: { onCreated: () => void }) {
   const authLoading = useAuthStore((state) => state.isLoading);
   const [value, setValue] = useState<R2ConnectionCreateInput>(initialValue);
   const provider = value.provider;
-  const fields = connectionFields.map((field) =>
-    field.key === "endpoint"
-      ? {
+  const fields = connectionFields
+    .filter((field) => {
+      if (provider === "s3") {
+        return field.key !== "endpoint" && field.key !== "accountId";
+      }
+      return true;
+    })
+    .map((field) => {
+      if (field.key === "endpoint") {
+        return {
           ...field,
           required: provider === "r2",
-          placeholder:
-            provider === "r2"
-              ? "https://<account-id>.r2.cloudflarestorage.com"
-              : "Optional, e.g. https://s3.us-east-1.amazonaws.com",
-        }
-      : field,
-  );
+          placeholder: "https://<account-id>.r2.cloudflarestorage.com",
+        };
+      }
+      if (field.key === "region") {
+        return {
+          ...field,
+          required: provider === "s3",
+        };
+      }
+      if (field.key === "publicUrl" && provider === "s3") {
+        return {
+          ...field,
+          placeholder: "https://<bucket>.s3.<region>.amazonaws.com",
+        };
+      }
+      return field;
+    });
 
   return (
     <form
@@ -133,11 +170,17 @@ export function ConnectionForm({ onCreated }: { onCreated: () => void }) {
                     : prev.region === "auto"
                       ? "us-east-1"
                       : prev.region,
-                endpoint:
+                publicUrl:
                   item === "s3" &&
-                  prev.endpoint.includes("r2.cloudflarestorage.com")
-                    ? ""
-                    : prev.endpoint,
+                  isAutoS3PublicUrl(prev.publicUrl, prev.bucketName, prev.region)
+                    ? s3PublicUrlFromBucketRegion(
+                        prev.bucketName,
+                        prev.region === "auto" ? "us-east-1" : prev.region,
+                      )
+                    : prev.publicUrl,
+                accountId: item === "s3" ? "" : prev.accountId,
+                endpoint:
+                  item === "s3" ? "" : prev.endpoint,
               }))
             }
           >
@@ -204,16 +247,35 @@ export function ConnectionForm({ onCreated }: { onCreated: () => void }) {
             value={value[field.key] ?? ""}
             onChange={(event) => {
               const nextValue = event.target.value;
-              setValue((prev) => ({
-                ...prev,
-                [field.key]: nextValue,
-                endpoint:
-                  provider === "r2" &&
-                  field.key === "accountId" &&
-                  isAutoR2Endpoint(prev.endpoint, prev.accountId ?? "")
-                    ? r2EndpointFromAccountId(nextValue)
-                    : prev.endpoint,
-              }));
+              setValue((prev) => {
+                const next = { ...prev, [field.key]: nextValue };
+                const nextBucketName =
+                  field.key === "bucketName" ? nextValue : prev.bucketName;
+                const nextRegion =
+                  field.key === "region" ? nextValue : prev.region;
+                return {
+                  ...next,
+                  endpoint:
+                    provider === "r2" &&
+                    field.key === "accountId" &&
+                    isAutoR2Endpoint(prev.endpoint, prev.accountId ?? "")
+                      ? r2EndpointFromAccountId(nextValue)
+                      : prev.endpoint,
+                  publicUrl:
+                    provider === "s3" &&
+                    (field.key === "bucketName" || field.key === "region") &&
+                    isAutoS3PublicUrl(
+                      prev.publicUrl,
+                      prev.bucketName,
+                      prev.region,
+                    )
+                      ? s3PublicUrlFromBucketRegion(
+                          nextBucketName,
+                          nextRegion,
+                        )
+                      : next.publicUrl,
+                };
+              });
             }}
             className="blue-focus mt-1 block w-full rounded-lg border border-app-border bg-white/5 px-3 py-2 text-sm text-app-text"
             placeholder={field.placeholder}

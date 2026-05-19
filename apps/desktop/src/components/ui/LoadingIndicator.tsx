@@ -13,7 +13,7 @@ export function LoadingIndicator({
     <span
       role="status"
       aria-live="polite"
-      className={`inline-flex items-center gap-2 text-xs text-app-muted ${className}`}
+      className={`inline-flex items-center gap-2 text-sm text-app-muted ${className}`}
     >
       <span
         className={`h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-app-border/40 border-t-accent ${spinnerClassName}`}

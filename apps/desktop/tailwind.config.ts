@@ -5,7 +5,7 @@ const config: Config = {
   content: [
     "./index.html",
     "./src/**/*.{ts,tsx}",
-    "../../packages/ui/src/**/*.{ts,tsx}"
+    "../../packages/ui/src/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {
@@ -17,28 +17,35 @@ const config: Config = {
           border: "rgba(255, 255, 255, 0.105)",
           text: "#f5f8ff",
           muted: "#aebbd1",
-          soft: "#8090aa"
+          soft: "#8090aa",
         },
         accent: {
           DEFAULT: "#2488ff",
           strong: "#0f7bff",
-          soft: "rgba(36, 136, 255, 0.14)"
-        }
+          soft: "rgba(36, 136, 255, 0.14)",
+        },
       },
       borderRadius: {
         app: "18px",
-        panel: "14px"
+        panel: "14px",
       },
       boxShadow: {
-        glass: "0 24px 80px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
-        blue: "0 0 0 1px rgba(36, 136, 255, 0.48), 0 0 24px rgba(36, 136, 255, 0.18)"
+        glass:
+          "0 24px 80px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
+        blue: "0 0 0 1px rgba(36, 136, 255, 0.48), 0 0 24px rgba(36, 136, 255, 0.18)",
       },
       fontFamily: {
-        sans: ["Inter", "Segoe UI Variable", "Segoe UI", "system-ui", "sans-serif"]
-      }
-    }
+        sans: [
+          "Inter",
+          "Segoe UI Variable",
+          "Segoe UI",
+          "system-ui",
+          "sans-serif",
+        ],
+      },
+    },
   },
-  plugins: []
+  plugins: [],
 };
 
 export default config;
