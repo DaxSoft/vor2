@@ -22,7 +22,7 @@ const config: Config = {
         accent: {
           DEFAULT: "#2488ff",
           strong: "#0f7bff",
-          soft: "rgba(36, 136, 255)",
+          soft: "rgba(36, 136, 255, 0.14)",
         },
       },
       borderRadius: {
