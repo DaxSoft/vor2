@@ -117,7 +117,12 @@ export function Sidebar({
                 onClick={() => setActiveConnection(connection.id)}
               >
                 <Database className="h-4 w-4 shrink-0" />
-                <span className="min-w-0 truncate" title={connection.bucketName}>{connection.bucketName}</span>
+                <span
+                  className="min-w-0 truncate"
+                  title={connection.bucketName}
+                >
+                  {connection.bucketName}
+                </span>
               </button>
             ))}
           </div>
@@ -158,7 +163,7 @@ export function Sidebar({
                 <button
                   key={path}
                   type="button"
-                  className={`flex min-w-0 w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs ${
+                  className={`flex min-w-0 w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm ${
                     currentPath === path
                       ? "bg-accent-soft text-app-text"
                       : "text-app-muted hover:bg-white/[0.06]"
@@ -169,7 +174,9 @@ export function Sidebar({
                   }}
                 >
                   <Folder className="h-3.5 w-3.5 shrink-0" />
-                  <span className="min-w-0 truncate" title={part}>{part}</span>
+                  <span className="min-w-0 truncate" title={part}>
+                    {part}
+                  </span>
                 </button>
               );
             })}
@@ -177,13 +184,18 @@ export function Sidebar({
               <button
                 key={folder.id}
                 type="button"
-                className="flex min-w-0 w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-app-muted hover:bg-white/[0.06]"
+                className="flex min-w-0 w-full max-w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm text-app-muted hover:bg-white/[0.06]"
                 onClick={() => {
                   void loadPath(`/${folder.key.replace(/\/$/, "")}`);
                 }}
               >
                 <Folder className="h-3.5 w-3.5 shrink-0" />
-                <span className="min-w-0 truncate" title={folder.name}>{folder.name}</span>
+                <span
+                  className="min-w-0 truncate max-w-[164px]"
+                  title={folder.name}
+                >
+                  {folder.name}
+                </span>
               </button>
             ))}
           </div>
